@@ -1,0 +1,6 @@
+﻿Mã vé,Họ tên,Số điện thoại,Email,Mã đơn hàng,Số thứ tự vé,Loại vé,Trạng thái,Đã check-in,Thời gian check-in,Cổng soát vé
+HVC-ALONE-12345,Phạm Quốc Tuấn,0977889900,tuan.pq@example.com,ORD-123456789,Vé 1/1,Vé FanZone (Stage Pass QR),VALID,CHƯA VÀO,,
+HVC-K2MJ8D-U754,Nguyễn Hoàng Nam,0912345678,nam.nh@example.com,ORD-739734074,Vé 1/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,
+HVC-K2MJ8D-U755,Nguyễn Hoàng Nam,0912345678,nam.nh@example.com,ORD-739734074,Vé 2/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,
+HVC-PRECHECK-001,Trần Thị Mai,0987654321,mai.tt@example.com,ORD-888888888,Vé 1/1,Vé VIP (Boss Pass QR),VALID,ĐÃ VÀO,2026-11-14T19:30:00+07:00,PRE_CHECKIN
+HVC-CANCELLED-99,Lê Văn Hùng,0933221100,hung.lv@example.com,ORD-999999999,Vé 1/1,Vé Thường (Player Pass QR),CANCELLED,CHƯA VÀO,,

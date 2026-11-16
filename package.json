@@ -1,0 +1,28 @@
+{
+  "name": "soatve-hungvuong",
+  "version": "1.0.0",
+  "description": "Hệ thống soát vé offline cho sự kiện Hùng Vương Concert: GAME ON",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "import": "node import.js",
+    "export": "node export.js",
+    "make-qr": "node make-test-qr.js",
+    "make-card": "node make-staff-card.js",
+    "test": "node test.js"
+  },
+  "keywords": [
+    "ticket-checkin",
+    "offline-lan",
+    "sqlite-wal",
+    "express"
+  ],
+  "author": "Antigravity Engineering",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "express": "^4.21.2",
+    "html5-qrcode": "^2.3.8",
+    "qrcode": "^1.5.4"
+  }
+}

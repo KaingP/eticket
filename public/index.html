@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Soát Vé - Hùng Vương Concert: GAME ON</title>
+  <script src="/html5-qrcode.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    /* Thanh trạng thái mất mạng */
+    #offline-banner {
+      display: none;
+      background: #dc2626;
+      color: #fff;
+      text-align: center;
+      padding: 10px;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      animation: pulse 1.2s infinite;
+      z-index: 9999;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    /* Header */
+    header {
+      background: #1e293b;
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+      gap: 8px;
+    }
+    .header-left {
+      display: flex;
+      flex-direction: column;
+    }
+    .event-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #38bdf8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .gate-container {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 2px;
+    }
+    .gate-label {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .gate-input {
+      background: #0f172a;
+      border: 1px solid #475569;
+      color: #f1f5f9;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      width: 90px;
+    }
+    .header-right {
+      text-align: right;
+    }
+    .stats-badge {
+      background: #0369a1;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .stats-count {
+      color: #38bdf8;
+      font-size: 14px;
+    }
+    /* Vùng Camera */
+    #reader-container {
+      flex: 1;
+      position: relative;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #reader {
+      width: 100% !important;
+      height: 100% !important;
+      border: none !important;
+    }
+    #reader video {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+    }
+    /* Aim Box Guide */
+    .scan-aim {
+      position: absolute;
+      width: 250px;
+      height: 250px;
+      border: 2px solid rgba(56, 189, 248, 0.7);
+      border-radius: 16px;
+      pointer-events: none;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .scan-aim::before {
+      content: "";
+      position: absolute;
+      width: 90%;
+      height: 2px;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+      animation: scanAnim 2s infinite ease-in-out;
+    }
+    @keyframes scanAnim {
+      0% { transform: translateY(-110px); }
+      50% { transform: translateY(110px); }
+      100% { transform: translateY(-110px); }
+    }
+    /* Nút công cụ camera trên màn hình */
+    .camera-tools {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 50;
+    }
+    .tool-btn {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+    .tool-btn:active {
+      transform: scale(0.92);
+      background: #38bdf8;
+      color: #0f172a;
+    }
+    /* Thanh công cụ dưới đáy */
+    footer {
+      background: #1e293b;
+      padding: 8px 12px;
+      display: flex;
+      gap: 8px;
+      border-top: 1px solid #334155;
+    }
+    .search-btn-trigger {
+      flex: 1;
+      background: #334155;
+      color: #f8fafc;
+      border: 1px solid #475569;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .admin-link-btn {
+      background: #0f172a;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* Overlay kết quả toàn màn hình (CỰC TO & RÕ NÉT) */
+    #result-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 99999;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      text-align: center;
+      color: #fff;
+      animation: popIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    #result-overlay.status-ok {
+      background: #059669; /* Xanh lá đậm */
+    }
+    #result-overlay.status-duplicate {
+      background: #d97706; /* Màu cam đậm */
+    }
+    #result-overlay.status-invalid {
+      background: #dc2626; /* Màu đỏ */
+    }
+    .res-icon {
+      font-size: 72px;
+      margin-bottom: 12px;
+      line-height: 1;
+    }
+    .res-title {
+      font-size: 36px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      line-height: 1.1;
+    }
+    .res-name {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 8px 16px;
+      border-radius: 8px;
+      max-width: 95%;
+      word-break: break-word;
+    }
+    .res-detail {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      opacity: 0.95;
+    }
+    .res-sub {
+      font-size: 15px;
+      margin-top: 8px;
+      opacity: 0.85;
+      font-family: monospace;
+    }
+    .res-tap-hint {
+      position: absolute;
+      bottom: 24px;
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 8px 18px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+    /* Modal Tra Cứu Thủ Công */
+    #search-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.9);
+      z-index: 10000;
+      padding: 16px;
+      flex-direction: column;
+      backdrop-filter: blur(8px);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .modal-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+    .close-modal-btn {
+      background: #334155;
+      color: #fff;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .search-box-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .search-input {
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 15px;
+      user-select: text;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: #38bdf8;
+    }
+    .search-submit-btn {
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .search-results-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .ticket-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 12px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ticket-info {
+      flex: 1;
+    }
+    .t-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .t-code {
+      font-family: monospace;
+      font-size: 13px;
+      color: #38bdf8;
+      margin: 2px 0;
+    }
+    .t-meta {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .checkin-action-btn {
+      background: #059669;
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      margin-left: 8px;
+    }
+    .badge-in {
+      background: #0284c7;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-cancelled {
+      background: #dc2626;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Banner Cảnh báo mất kết nối Server -->
+  <div id="offline-banner">
+    ⚠️ MẤT KẾT NỐI SERVER - TẠM DỪNG SOÁT VÉ!
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="header-left">
+      <span class="event-title">GAME ON 🎫 SOÁT VÉ</span>
+      <div class="gate-container">
+        <span class="gate-label">Vị trí:</span>
+        <span style="font-size:12px; font-weight:700; color:#38bdf8; background:#0f172a; padding:2px 8px; border-radius:4px; border:1px solid #334155;">Cổng Chính</span>
+        <input type="hidden" id="gate-input" value="Cổng chính">
+      </div>
+    </div>
+    <div class="header-right" style="display:flex; align-items:center; gap:6px;">
+      <button id="open-qr-share-btn" class="tool-btn" style="width:34px; height:34px; font-size:15px;" title="Chia sẻ mã QR cho nhân viên khác">📱</button>
+      <div class="stats-badge">
+        Đã vào: <span id="stats-checked" class="stats-count">0</span> / <span id="stats-total">0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Vùng Camera Quét QR -->
+  <div id="reader-container">
+    <div id="reader"></div>
+    <div class="scan-aim"></div>
+
+    <div class="camera-tools">
+      <button id="torch-btn" class="tool-btn" title="Bật/Tắt Flash">⚡</button>
+      <button id="flip-camera-btn" class="tool-btn" title="Đổi Camera">🔄</button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <button id="open-search-btn" class="search-btn-trigger">
+      🔍 Tra cứu thủ công (Mã / Tên / SĐT)
+    </button>
+    <a href="/admin.html" class="admin-link-btn">⚙ Quản lý</a>
+  </footer>
+
+  <!-- Overlay Kết Quả Toàn Màn Hình -->
+  <div id="result-overlay">
+    <div id="res-icon" class="res-icon">✔</div>
+    <div id="res-title" class="res-title">OK</div>
+    <div id="res-name" class="res-name">Tên Khách Hàng</div>
+    <div id="res-detail" class="res-detail">Chi tiết vé</div>
+    <div id="res-sub" class="res-sub">Mã vé</div>
+    <div class="res-tap-hint">Chạm màn hình để tiếp tục</div>
+  </div>
+
+  <!-- Modal Tra Cứu Thủ Công -->
+  <div id="search-modal">
+    <div class="modal-header">
+      <div class="modal-title">Tra cứu vé thủ công</div>
+      <button id="close-search-btn" class="close-modal-btn">✕</button>
+    </div>
+    <div class="search-box-row">
+      <input type="text" id="search-query-input" class="search-input" placeholder="Nhập mã vé, SĐT hoặc Tên khách...">
+      <button id="search-action-btn" class="search-submit-btn">Tìm</button>
+    </div>
+    <div id="search-results-list" class="search-results-list">
+      <!-- Kết quả đổ vào đây -->
+    </div>
+  </div>
+
+  <!-- Modal Chia sẻ Mã QR cho nhân viên khác -->
+  <div id="share-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.92); z-index:10001; padding:20px; flex-direction:column; justify-content:center; align-items:center; backdrop-filter:blur(8px); text-align:center;">
+    <div style="background:#1e293b; border:1px solid #334155; border-radius:16px; padding:24px; max-width:340px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
+      <h3 style="color:#38bdf8; font-size:17px; margin-bottom:4px;">QR KẾT NỐI SOÁT VÉ</h3>
+      <p style="color:#94a3b8; font-size:12px; margin-bottom:16px;">Mở Camera điện thoại khác quét mã này</p>
+      <div style="background:#fff; padding:12px; border-radius:12px; display:inline-block; margin-bottom:12px;">
+        <img id="share-qr-img" src="" alt="QR" style="width:200px; height:200px; display:block;">
+      </div>
+      <div id="share-qr-url" style="font-family:monospace; font-size:12px; color:#38bdf8; word-break:break-all; margin-bottom:16px; background:#0f172a; padding:6px 10px; border-radius:6px;">---</div>
+      <button id="close-share-btn" style="background:#334155; color:#fff; border:none; padding:8px 24px; border-radius:8px; font-weight:700; cursor:pointer;">Đóng</button>
+    </div>
+  </div>
+
+  <script>
+    // Xử lý mở Modal Share QR
+    const shareModal = document.getElementById('share-modal');
+    const openQrShareBtn = document.getElementById('open-qr-share-btn');
+    const closeShareBtn = document.getElementById('close-share-btn');
+    const shareQrImg = document.getElementById('share-qr-img');
+    const shareQrUrl = document.getElementById('share-qr-url');
+
+    openQrShareBtn.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/system-info');
+        const info = await res.json();
+        shareQrImg.src = info.qrDataUrl;
+        shareQrUrl.innerText = info.primaryUrl;
+        shareModal.style.display = 'flex';
+      } catch (err) {
+        alert('Lỗi lấy mã QR chia sẻ!');
+      }
+    });
+
+    closeShareBtn.addEventListener('click', () => {
+      shareModal.style.display = 'none';
+    });
+    // 1. Quản lý Tên Cổng (localStorage)
+    const gateInput = document.getElementById('gate-input');
+    const savedGate = localStorage.getItem('soatve_gate_name');
+    if (savedGate) gateInput.value = savedGate;
+    gateInput.addEventListener('change', () => {
+      localStorage.setItem('soatve_gate_name', gateInput.value.trim() || 'Cổng 1');
+    });
+
+    // 2. Web Audio API (Âm bíp độc lập không cần file ngoài)
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+    // Kích hoạt audio context ngay khi user chạm vào trang
+    window.addEventListener('click', initAudio, { once: true });
+    window.addEventListener('touchstart', initAudio, { once: true });
+
+    function playBeep(type) {
+      try {
+        initAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+
+        if (type === 'OK') {
+          // Bíp đôi âm vực cao thanh thoát
+          const osc1 = audioCtx.createOscillator();
+          const gain1 = audioCtx.createGain();
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(880, now);
+          gain1.gain.setValueAtTime(0.35, now);
+          gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+          osc1.connect(gain1);
+          gain1.connect(audioCtx.destination);
+          osc1.start(now);
+          osc1.stop(now + 0.1);
+
+          const osc2 = audioCtx.createOscillator();
+          const gain2 = audioCtx.createGain();
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(1320, now + 0.12);
+          gain2.gain.setValueAtTime(0.35, now + 0.12);
+          gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+          osc2.connect(gain2);
+          gain2.connect(audioCtx.destination);
+          osc2.start(now + 0.12);
+          osc2.stop(now + 0.25);
+        } else if (type === 'DUPLICATE') {
+          // Còi trầm cảnh báo 2 nhịp
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(260, now);
+          osc.frequency.linearRampToValueAtTime(180, now + 0.35);
+          gain.gain.setValueAtTime(0.4, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        } else {
+          // INVALID / ERROR: Còi gắt dồn dập
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(150, now);
+          gain.gain.setValueAtTime(0.5, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.4);
+        }
+      } catch (e) {
+        console.warn('Audio error:', e);
+      }
+    }
+
+    // 3. Rung (Haptics)
+    function triggerVibrate(type) {
+      if (!navigator.vibrate) return;
+      if (type === 'OK') {
+        navigator.vibrate([100, 50, 100]);
+      } else if (type === 'DUPLICATE') {
+        navigator.vibrate([300, 100, 300, 100, 300]);
+      } else {
+        navigator.vibrate([500, 100, 500]);
+      }
+    }
+
+    // 4. Wake Lock (Giữ màn hình luôn sáng)
+    let wakeLock = null;
+    async function requestWakeLock() {
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+        } catch (err) {}
+      }
+    }
+    requestWakeLock();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') requestWakeLock();
+    });
+
+    // 5. Kiểm tra kết nối Server định kỳ & Cập nhật thống kê
+    const offlineBanner = document.getElementById('offline-banner');
+    const statsCheckedEl = document.getElementById('stats-checked');
+    const statsTotalEl = document.getElementById('stats-total');
+    let isServerOnline = true;
+
+    async function fetchStats() {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        const res = await fetch('/api/stats', { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const data = await res.json();
+          statsCheckedEl.innerText = data.checked || 0;
+          statsTotalEl.innerText = data.total || 0;
+          if (!isServerOnline) {
+            isServerOnline = true;
+            offlineBanner.style.display = 'none';
+          }
+        } else {
+          markOffline();
+        }
+      } catch (err) {
+        markOffline();
+      }
+    }
+
+    function markOffline() {
+      isServerOnline = false;
+      offlineBanner.style.display = 'block';
+    }
+
+    setInterval(fetchStats, 3000);
+    fetchStats();
+
+    // 6. Hiển thị Kết Quả Lớn Phủ Màn Hình
+    const overlay = document.getElementById('result-overlay');
+    const resIcon = document.getElementById('res-icon');
+    const resTitle = document.getElementById('res-title');
+    const resName = document.getElementById('res-name');
+    const resDetail = document.getElementById('res-detail');
+    const resSub = document.getElementById('res-sub');
+    let overlayTimeout = null;
+
+    function showResult(data) {
+      if (overlayTimeout) clearTimeout(overlayTimeout);
+
+      overlay.className = '';
+
+      if (data.status === 'OK') {
+        overlay.classList.add('status-ok');
+        resIcon.innerText = '✔';
+        resTitle.innerText = 'CHO VÀO';
+        resName.innerText = data.name || 'Khách Hàng';
+        resDetail.innerText = `${data.label || ''} • ${data.type || ''}`;
+        resSub.innerText = `Mã: ${data.code} • Đơn: ${data.orderId || ''}`;
+        playBeep('OK');
+        triggerVibrate('OK');
+      } else if (data.status === 'DUPLICATE') {
+        overlay.classList.add('status-duplicate');
+        resIcon.innerText = '⚠';
+        resTitle.innerText = 'ĐÃ SỬ DỤNG';
+        resName.innerText = data.name || 'Khách Hàng';
+
+        let timeStr = '';
+        if (data.at) {
+          try {
+            const d = new Date(data.at);
+            timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+          } catch(e) {}
+        }
+        resDetail.innerText = `Đã vào lúc: ${timeStr} (${data.gate || 'Không rõ'})`;
+        resSub.innerText = `Mã: ${data.code} • CẢNH BÁO TRÙNG VÉ!`;
+        playBeep('DUPLICATE');
+        triggerVibrate('DUPLICATE');
+      } else if (data.status === 'NOT_VALID_STATUS') {
+        overlay.classList.add('status-invalid');
+        resIcon.innerText = '✖';
+        resTitle.innerText = 'VÉ BỊ HỦY';
+        resName.innerText = data.name || 'Khách Hàng';
+        resDetail.innerText = `Trạng thái vé: ${data.ticketStatus || 'CANCELLED'}`;
+        resSub.innerText = `Mã: ${data.code} • KHÔNG ĐƯỢC VÀO!`;
+        playBeep('ERROR');
+        triggerVibrate('ERROR');
+      } else {
+        // INVALID hoặc khác
+        overlay.classList.add('status-invalid');
+        resIcon.innerText = '✖';
+        resTitle.innerText = 'VÉ KHÔNG HỢP LỆ';
+        resName.innerText = 'MÃ KHÔNG TỒN TẠI';
+        resDetail.innerText = data.message || 'Mã vé không có trong hệ thống';
+        resSub.innerText = `Mã: ${data.code || ''}`;
+        playBeep('ERROR');
+        triggerVibrate('ERROR');
+      }
+
+      overlay.style.display = 'flex';
+
+      // Tự động tắt sau 3.5 giây
+      overlayTimeout = setTimeout(() => {
+        closeResult();
+      }, 3500);
+    }
+
+    function closeResult() {
+      if (overlayTimeout) clearTimeout(overlayTimeout);
+      overlay.style.display = 'none';
+    }
+
+    overlay.addEventListener('click', closeResult);
+
+    // 7. Logic Quét QR & Gửi API Scan
+    let lastCode = '';
+    let lastTime = 0;
+    let isProcessing = false;
+
+    async function onScanSuccess(decodedText) {
+      if (isProcessing) return;
+
+      const code = (decodedText || '').trim().toUpperCase();
+      if (!code) return;
+
+      // Chặn quét lặp cùng 1 mã trong 3 giây ở client
+      const now = Date.now();
+      if (code === lastCode && (now - lastTime < 3000)) {
+        return;
+      }
+      lastCode = code;
+      lastTime = now;
+
+      // Không tự cho vào nếu mất mạng
+      if (!isServerOnline) {
+        showResult({
+          status: 'INVALID',
+          code,
+          message: 'Mất kết nối tới máy chủ! Vui lòng kiểm tra Wi-Fi.'
+        });
+        return;
+      }
+
+      isProcessing = true;
+      const currentGate = gateInput.value.trim() || 'Cổng 1';
+
+      try {
+        const res = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, gate: currentGate })
+        });
+        const data = await res.json();
+        showResult(data);
+        fetchStats(); // Cập nhật lại số vé đã vào
+      } catch (err) {
+        markOffline();
+        showResult({
+          status: 'INVALID',
+          code,
+          message: 'Lỗi gửi yêu cầu tới server!'
+        });
+      } finally {
+        setTimeout(() => {
+          isProcessing = false;
+        }, 1200);
+      }
+    }
+
+    // 8. Khởi tạo Camera bằng Html5Qrcode
+    let html5QrCode = null;
+    let currentCameraIndex = 0;
+    let availableCameras = [];
+    let isTorchOn = false;
+
+    async function initCamera() {
+      html5QrCode = new Html5Qrcode("reader");
+
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length) {
+          availableCameras = devices;
+          // Ưu tiên camera sau
+          const backCamIndex = devices.findIndex(c =>
+            c.label.toLowerCase().includes('back') ||
+            c.label.toLowerCase().includes('rear') ||
+            c.label.toLowerCase().includes('environment')
+          );
+          currentCameraIndex = backCamIndex !== -1 ? backCamIndex : 0;
+          startCamera(availableCameras[currentCameraIndex].id);
+        } else {
+          startCamera({ facingMode: "environment" });
+        }
+      } catch (err) {
+        console.warn('Lỗi lấy danh sách camera, fallback facingMode:', err);
+        startCamera({ facingMode: "environment" });
+      }
+    }
+
+    function startCamera(cameraIdOrConfig) {
+      const config = {
+        fps: 15,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
+      };
+
+      html5QrCode.start(
+        cameraIdOrConfig,
+        config,
+        onScanSuccess,
+        (errorMessage) => {
+          // Bỏ qua log frame quét thất bại
+        }
+      ).catch(err => {
+        console.error("Không thể mở Camera:", err);
+      });
+    }
+
+    // Nút đổi Camera
+    document.getElementById('flip-camera-btn').addEventListener('click', async () => {
+      if (availableCameras.length <= 1) return;
+      currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
+      try {
+        await html5QrCode.stop();
+        startCamera(availableCameras[currentCameraIndex].id);
+      } catch (e) {
+        console.error(e);
+      }
+    });
+
+    // Nút Bật / Tắt Flash
+    document.getElementById('torch-btn').addEventListener('click', async () => {
+      try {
+        isTorchOn = !isTorchOn;
+        await html5QrCode.applyVideoConstraints({
+          advanced: [{ torch: isTorchOn }]
+        });
+        document.getElementById('torch-btn').style.background = isTorchOn ? '#38bdf8' : 'rgba(15, 23, 42, 0.75)';
+        document.getElementById('torch-btn').style.color = isTorchOn ? '#0f172a' : '#fff';
+      } catch (err) {
+        alert('Thiết bị không hỗ trợ bật đèn Flash từ trình duyệt');
+      }
+    });
+
+    // 9. Tra cứu thủ công Modal
+    const searchModal = document.getElementById('search-modal');
+    const openSearchBtn = document.getElementById('open-search-btn');
+    const closeSearchBtn = document.getElementById('close-search-btn');
+    const searchQueryInput = document.getElementById('search-query-input');
+    const searchActionBtn = document.getElementById('search-action-btn');
+    const searchResultsList = document.getElementById('search-results-list');
+
+    openSearchBtn.addEventListener('click', () => {
+      searchModal.style.display = 'flex';
+      searchQueryInput.focus();
+    });
+
+    closeSearchBtn.addEventListener('click', () => {
+      searchModal.style.display = 'none';
+      searchResultsList.innerHTML = '';
+      searchQueryInput.value = '';
+    });
+
+    async function executeSearch() {
+      const q = searchQueryInput.value.trim();
+      if (!q) return;
+
+      searchResultsList.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;">Đang tìm kiếm...</div>';
+
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const list = await res.json();
+
+        if (!list || list.length === 0) {
+          searchResultsList.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;">Không tìm thấy vé nào phù hợp</div>';
+          return;
+        }
+
+        searchResultsList.innerHTML = '';
+        for (const t of list) {
+          const card = document.createElement('div');
+          card.className = 'ticket-card';
+
+          const isChecked = t.checked_in === 1;
+          const isCancelled = t.status !== 'VALID';
+
+          let actionHtml = '';
+          if (isChecked) {
+            actionHtml = `<span class="badge-in">Đã vào (${t.gate || ''})</span>`;
+          } else if (isCancelled) {
+            actionHtml = `<span class="badge-cancelled">${t.status}</span>`;
+          } else {
+            actionHtml = `<button class="checkin-action-btn" onclick="manualCheckin('${t.code}')">CHO VÀO</button>`;
+          }
+
+          card.innerHTML = `
+            <div class="ticket-info">
+              <div class="t-name">${t.name || 'Không có tên'}</div>
+              <div class="t-code">${t.code}</div>
+              <div class="t-meta">${t.label || ''} • SĐT: ${t.phone || 'N/A'} • Đơn: ${t.order_id || ''}</div>
+            </div>
+            <div>${actionHtml}</div>
+          `;
+          searchResultsList.appendChild(card);
+        }
+      } catch (e) {
+        searchResultsList.innerHTML = '<div style="text-align:center;padding:20px;color:#dc2626;">Lỗi kết nối tra cứu!</div>';
+      }
+    }
+
+    searchActionBtn.addEventListener('click', executeSearch);
+    searchQueryInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') executeSearch();
+    });
+
+    window.manualCheckin = async function(code) {
+      if (!confirm(`Xác nhận cho vé ${code} vào?`)) return;
+      const currentGate = gateInput.value.trim() || 'Cổng 1';
+
+      try {
+        const res = await fetch('/api/manual-checkin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, gate: currentGate })
+        });
+        const data = await res.json();
+        searchModal.style.display = 'none';
+        showResult(data);
+        fetchStats();
+      } catch (err) {
+        alert('Lỗi khi thực hiện check-in tay!');
+      }
+    };
+
+    // Khởi động Camera khi DOM sẵn sàng
+    window.addEventListener('DOMContentLoaded', initCamera);
+  </script>
+</body>
+</html>

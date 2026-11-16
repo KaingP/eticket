@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản Trị Soát Vé - Hùng Vương Concert</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0b0f19;
+      color: #f1f5f9;
+      padding: 20px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #1e293b;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header-title h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+    .header-title p {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .btn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary { background: #0284c7; color: #fff; }
+    .btn-primary:hover { background: #0369a1; }
+    .btn-success { background: #059669; color: #fff; }
+    .btn-success:hover { background: #047857; }
+    .btn-secondary { background: #1e293b; color: #cbd5e1; border-color: #334155; }
+    .btn-secondary:hover { background: #334155; }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+
+    /* Thẻ Số Liệu Tổng Quan */
+    .grid-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #131c2e;
+      border: 1px solid #1e293b;
+      padding: 16px;
+      border-radius: 10px;
+    }
+    .stat-label {
+      font-size: 13px;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    .stat-val {
+      font-size: 28px;
+      font-weight: 800;
+      color: #f8fafc;
+      margin: 4px 0;
+    }
+    .stat-sub {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    /* Bảng Cổng & Log */
+    .grid-two {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 800px) {
+      .grid-two { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: #131c2e;
+      border: 1px solid #1e293b;
+      padding: 18px;
+      border-radius: 10px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Cổng List */
+    .gate-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .gate-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #0b0f19;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .gate-name { font-weight: 600; color: #38bdf8; }
+    .gate-count { font-weight: 700; color: #10b981; }
+
+    /* Tables */
+    .table-container {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    th {
+      background: #0f172a;
+      color: #94a3b8;
+      padding: 10px 12px;
+      font-weight: 600;
+      border-bottom: 1px solid #1e293b;
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1e293b;
+      color: #cbd5e1;
+    }
+    tr:hover {
+      background: #1e293b;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge-ok { background: #064e3b; color: #34d399; }
+    .badge-dup { background: #78350f; color: #fbbf24; }
+    .badge-err { background: #7f1d1d; color: #f87171; }
+    .badge-undo { background: #312e81; color: #a5b4fc; }
+
+    /* Controls cho Bảng Vé */
+    .tickets-controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .search-input {
+      flex: 1;
+      min-width: 200px;
+      background: #0b0f19;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .filter-select {
+      background: #0b0f19;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    /* Modal PIN */
+    #pin-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-box {
+      background: #1e293b;
+      padding: 24px;
+      border-radius: 12px;
+      max-width: 360px;
+      width: 90%;
+      text-align: center;
+    }
+    .modal-box h3 {
+      margin-bottom: 8px;
+      color: #38bdf8;
+    }
+    .modal-box p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 16px;
+    }
+    .pin-input {
+      width: 100%;
+      padding: 10px;
+      font-size: 18px;
+      letter-spacing: 4px;
+      text-align: center;
+      background: #0f172a;
+      border: 1px solid #475569;
+      color: #fff;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Modal Nhập PIN nếu chưa lưu -->
+  <div id="pin-modal">
+    <div class="modal-box">
+      <h3>Xác thực Quản Trị</h3>
+      <p>Vui lòng nhập mã PIN quản trị hệ thống</p>
+      <input type="password" id="admin-pin-field" class="pin-input" placeholder="••••••">
+      <div style="display:flex; gap:10px; justify-content:center;">
+        <button id="submit-pin-btn" class="btn btn-primary">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <header>
+      <div class="header-title">
+        <h1>HỆ THỐNG SOÁT VÉ QUẢN TRỊ</h1>
+        <p>Hùng Vương Concert: GAME ON • Mạng Offline LAN</p>
+      </div>
+      <div class="nav-actions">
+        <a href="/qr" target="_blank" class="btn btn-primary" style="background:#0284c7;">📱 Mã QR Mời Nhân Viên</a>
+        <a href="/" class="btn btn-secondary">📱 Trang Quét Vé</a>
+        <button id="refresh-btn" class="btn btn-secondary">🔄 Làm mới</button>
+        <button id="export-json-btn" class="btn btn-primary">📥 Tải JSON</button>
+        <button id="export-csv-btn" class="btn btn-success">📊 Tải CSV</button>
+        <button id="export-db-btn" class="btn btn-secondary">💾 Tải DB Backup</button>
+      </div>
+    </header>
+
+    <!-- Thẻ Thống Kê Tổng Quan -->
+    <div class="grid-stats">
+      <div class="stat-card">
+        <div class="stat-label">TỔNG VÉ HỢP LỆ</div>
+        <div id="stat-total" class="stat-val">0</div>
+        <div class="stat-sub">Tổng phát hành</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">ĐÃ CHECK-IN</div>
+        <div id="stat-checked" class="stat-val" style="color: #34d399;">0</div>
+        <div id="stat-percent" class="stat-sub">0% số khách đã vào</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">CHƯA CHECK-IN</div>
+        <div id="stat-remaining" class="stat-val" style="color: #f59e0b;">0</div>
+        <div class="stat-sub">Đang chờ soát vé</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">TỔNG BẢN GHI VÉ</div>
+        <div id="stat-total-all" class="stat-val" style="color: #94a3b8;">0</div>
+        <div class="stat-sub">Bao gồm cả vé hủy</div>
+      </div>
+    </div>
+
+    <!-- Cột Cổng & 20 Lượt Quét Gần Nhất -->
+    <div class="grid-two">
+      <!-- Cột Cổng -->
+      <div class="card">
+        <div class="card-title">
+          <span>Thống kê theo Cổng</span>
+        </div>
+        <div id="gate-list-container" class="gate-list">
+          <div style="color: #64748b; font-size: 13px;">Chưa có lượt quét nào</div>
+        </div>
+      </div>
+
+      <!-- 20 Lượt Quét Gần Nhất -->
+      <div class="card">
+        <div class="card-title">
+          <span>20 Lượt Quét Gần Nhất</span>
+        </div>
+        <div class="table-container" style="max-height: 240px; overflow-y: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Thời gian</th>
+                <th>Mã vé</th>
+                <th>Khách hàng</th>
+                <th>Cổng</th>
+                <th>Kết quả</th>
+              </tr>
+            </thead>
+            <tbody id="recent-scans-tbody">
+              <!-- Render động -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bảng Danh Sách Vé -->
+    <div class="card">
+      <div class="card-title">
+        <span>Danh Sách Vé (<span id="table-total-count">0</span>)</span>
+      </div>
+
+      <div class="tickets-controls">
+        <input type="text" id="search-filter-input" class="search-input" placeholder="Tìm kiếm theo mã vé, tên khách, SĐT, mã đơn...">
+        <select id="status-filter-select" class="filter-select">
+          <option value="all">Tất cả vé</option>
+          <option value="unchecked">Chưa check-in</option>
+          <option value="checked">Đã check-in</option>
+          <option value="invalid">Vé hủy / không hợp lệ</option>
+        </select>
+        <button id="apply-filter-btn" class="btn btn-primary">Tìm kiếm</button>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Mã vé</th>
+              <th>Họ tên</th>
+              <th>SĐT</th>
+              <th>Mã đơn</th>
+              <th>Số thứ tự</th>
+              <th>Loại vé</th>
+              <th>Trạng thái</th>
+              <th>Cổng vào</th>
+              <th>Thời gian vào</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="tickets-tbody">
+            <!-- Render danh sách vé -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let adminPin = sessionStorage.getItem('soatve_admin_pin') || '';
+
+    // Modal PIN
+    const pinModal = document.getElementById('pin-modal');
+    const pinField = document.getElementById('admin-pin-field');
+    const submitPinBtn = document.getElementById('submit-pin-btn');
+
+    function checkAuth() {
+      if (!adminPin) {
+        pinModal.style.display = 'flex';
+        pinField.focus();
+      } else {
+        pinModal.style.display = 'none';
+        loadDashboard();
+      }
+    }
+
+    submitPinBtn.addEventListener('click', () => {
+      const val = pinField.value.trim();
+      if (!val) return alert('Vui lòng nhập mã PIN');
+      adminPin = val;
+      sessionStorage.setItem('soatve_admin_pin', adminPin);
+      pinModal.style.display = 'none';
+      loadDashboard();
+    });
+
+    pinField.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') submitPinBtn.click();
+    });
+
+    // Load Dữ Liệu Dashboard
+    async function loadDashboard() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+
+        // 1. Thống kê cards
+        document.getElementById('stat-total').innerText = data.total || 0;
+        document.getElementById('stat-checked').innerText = data.checked || 0;
+        document.getElementById('stat-remaining').innerText = data.remaining || 0;
+        document.getElementById('stat-total-all').innerText = data.totalAll || 0;
+
+        const percent = data.total > 0 ? Math.round((data.checked / data.total) * 100) : 0;
+        document.getElementById('stat-percent').innerText = `${percent}% số khách đã vào`;
+
+        // 2. Thống kê theo cổng
+        const gateContainer = document.getElementById('gate-list-container');
+        gateContainer.innerHTML = '';
+        const gates = Object.entries(data.by_gate || {});
+        if (gates.length === 0) {
+          gateContainer.innerHTML = '<div style="color:#64748b; font-size:13px;">Chưa có dữ liệu cổng</div>';
+        } else {
+          for (const [gateName, count] of gates) {
+            const item = document.createElement('div');
+            item.className = 'gate-item';
+            item.innerHTML = `
+              <span class="gate-name">${gateName}</span>
+              <span class="gate-count">${count} vé</span>
+            `;
+            gateContainer.appendChild(item);
+          }
+        }
+
+        // 3. 20 Lượt quét gần nhất
+        const recentTbody = document.getElementById('recent-scans-tbody');
+        recentTbody.innerHTML = '';
+        for (const log of (data.recent_scans || [])) {
+          let badgeClass = 'badge-ok';
+          if (log.result === 'DUPLICATE') badgeClass = 'badge-dup';
+          else if (log.result === 'UNDO') badgeClass = 'badge-undo';
+          else if (log.result !== 'OK') badgeClass = 'badge-err';
+
+          let timeStr = log.at ? log.at.substring(11, 19) : '';
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${timeStr}</td>
+            <td style="font-family:monospace; color:#38bdf8;">${log.code}</td>
+            <td>${log.name || '---'}</td>
+            <td>${log.gate || '---'}</td>
+            <td><span class="badge ${badgeClass}">${log.result}</span></td>
+          `;
+          recentTbody.appendChild(tr);
+        }
+
+        // 4. Load bảng danh sách vé
+        loadTickets();
+      } catch (err) {
+        console.error('Lỗi tải dữ liệu dashboard:', err);
+      }
+    }
+
+    // Load Bảng Danh Sách Vé
+    async function loadTickets() {
+      const search = document.getElementById('search-filter-input').value.trim();
+      const filter = document.getElementById('status-filter-select').value;
+      const tbody = document.getElementById('tickets-tbody');
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px;">Đang tải...</td></tr>';
+
+      try {
+        const url = `/api/admin/tickets?filter=${filter}&search=${encodeURIComponent(search)}&limit=100`;
+        const res = await fetch(url, {
+          headers: { 'x-admin-pin': adminPin }
+        });
+
+        if (res.status === 403) {
+          sessionStorage.removeItem('soatve_admin_pin');
+          adminPin = '';
+          alert('Mã PIN không chính xác');
+          checkAuth();
+          return;
+        }
+
+        const data = await res.json();
+        document.getElementById('table-total-count').innerText = data.total || 0;
+
+        tbody.innerHTML = '';
+        if (!data.items || data.items.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px; color:#64748b;">Không có vé nào phù hợp</td></tr>';
+          return;
+        }
+
+        for (const t of data.items) {
+          const tr = document.createElement('tr');
+          const isChecked = t.checked_in === 1;
+
+          let statusBadge = '<span class="badge badge-ok">HỢP LỆ</span>';
+          if (t.status !== 'VALID') {
+            statusBadge = `<span class="badge badge-err">${t.status}</span>`;
+          }
+
+          let checkinBadge = isChecked
+            ? `<span class="badge badge-ok">ĐÃ VÀO</span>`
+            : `<span class="badge" style="background:#334155; color:#94a3b8;">CHƯA VÀO</span>`;
+
+          let timeStr = t.checked_at ? t.checked_at.replace('T', ' ').substring(0, 19) : '---';
+
+          let actionBtn = '---';
+          if (isChecked) {
+            actionBtn = `<button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="undoTicket('${t.code}')">Hoàn tác</button>`;
+          }
+
+          tr.innerHTML = `
+            <td style="font-family:monospace; font-weight:700; color:#38bdf8;">${t.code}</td>
+            <td style="font-weight:600;">${t.name || ''}</td>
+            <td>${t.phone || ''}</td>
+            <td style="font-family:monospace;">${t.order_id || ''}</td>
+            <td>${t.label || ''}</td>
+            <td>${t.type || ''}</td>
+            <td>${statusBadge} ${checkinBadge}</td>
+            <td>${t.gate || '---'}</td>
+            <td style="font-size:12px;">${timeStr}</td>
+            <td>${actionBtn}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px; color:#f87171;">Lỗi tải dữ liệu vé</td></tr>';
+      }
+    }
+
+    // Hoàn tác vé (Undo)
+    window.undoTicket = async function(code) {
+      if (!confirm(`Bạn có chắc chắn muốn HOÀN TÁC check-in cho vé ${code}?`)) return;
+
+      try {
+        const res = await fetch('/api/undo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, pin: adminPin })
+        });
+        const data = await res.json();
+        if (data.status === 'OK') {
+          alert(`Đã hoàn tác vé ${code} thành công!`);
+          loadDashboard();
+        } else {
+          alert(`Lỗi: ${data.message || data.error}`);
+        }
+      } catch (e) {
+        alert('Lỗi kết nối khi hoàn tác vé!');
+      }
+    };
+
+    // Nút Lọc / Tìm kiếm
+    document.getElementById('apply-filter-btn').addEventListener('click', loadTickets);
+    document.getElementById('search-filter-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') loadTickets();
+    });
+    document.getElementById('refresh-btn').addEventListener('click', loadDashboard);
+
+    // Xuất File Tải về
+    document.getElementById('export-json-btn').addEventListener('click', () => {
+      window.location.href = `/api/export?format=json&pin=${encodeURIComponent(adminPin)}`;
+    });
+    document.getElementById('export-csv-btn').addEventListener('click', () => {
+      window.location.href = `/api/export?format=csv&pin=${encodeURIComponent(adminPin)}`;
+    });
+    document.getElementById('export-db-btn').addEventListener('click', () => {
+      window.location.href = `/api/backup/download?pin=${encodeURIComponent(adminPin)}`;
+    });
+
+    // Khởi chạy
+    checkAuth();
+  </script>
+</body>
+</html>

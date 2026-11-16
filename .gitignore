@@ -1,0 +1,8 @@
+node_modules/
+data/backup/
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/test_qrs/
+*.log
+.DS_Store
