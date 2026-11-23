@@ -539,6 +539,18 @@ app.get('/api/tickets/:code', (req, res) => {
   });
 });
 
+// 5.1 API Cập nhật ghi chú (Note) cho vé
+app.post('/api/tickets/:code/note', (req, res) => {
+  const code = (req.params.code || '').trim().toUpperCase();
+  const note = (req.body.note || '').trim();
+  const result = db.prepare('UPDATE tickets SET note = ? WHERE code = ?').run(note, code);
+  if (result.changes === 1) {
+    res.json({ success: true, status: 'OK', code, note });
+  } else {
+    res.status(404).json({ success: false, message: 'Không tìm thấy vé' });
+  }
+});
+
 // 6. API Nhập danh sách vé (Diagram 0: Nhập file .csv hoặc .json)
 app.post('/api/import', (req, res) => {
   try {

@@ -32,18 +32,26 @@ async function generateTestQrs() {
   }
 
   // Danh sách các vé kiểm thử mẫu
-  const testList = Object.entries(tickets).map(([code, item]) => ({
-    code: item.ticketCode || code,
-    name: item.customerName || 'Khách Hàng',
-    label: item.ticketLabel || 'Vé 1/1',
-    type: item.ticketTypeName || 'Vé thường',
-    orderId: item.orderId || 'ORD-000',
-    expected: item.checkedIn
-      ? 'DUPLICATE (Vé đã check-in sẵn)'
-      : item.status !== 'VALID'
-      ? 'NOT_VALID_STATUS (Vé bị hủy)'
-      : 'OK (Hợp lệ, cho vào)'
-  }));
+  const testList = Object.entries(tickets).map(([code, item]) => {
+    const note = item.note || item.notes || item.ghiChu || '';
+    let exp = 'OK (Hợp lệ, cho vào)';
+    if (item.checkedIn) {
+      exp = 'DUPLICATE (Vé đã check-in sẵn)';
+    } else if (item.status !== 'VALID') {
+      exp = 'NOT_VALID_STATUS (Vé bị hủy)';
+    } else if (note) {
+      exp = `OK (Hợp lệ + Ghi chú: ${note})`;
+    }
+    return {
+      code: item.ticketCode || code,
+      name: item.customerName || 'Khách Hàng',
+      label: item.ticketLabel || 'Vé 1/1',
+      type: item.ticketTypeName || 'Vé thường',
+      orderId: item.orderId || 'ORD-000',
+      note: note,
+      expected: exp
+    };
+  });
 
   // Thêm 1 vé giả lập không có trong DB
   testList.push({
@@ -52,6 +60,7 @@ async function generateTestQrs() {
     label: 'Vé Lạ',
     type: 'Vé Giả Mạo',
     orderId: 'ORD-FAKE',
+    note: '',
     expected: 'INVALID (Mã không tồn tại)'
   });
 
@@ -86,6 +95,7 @@ async function generateTestQrs() {
         <div class="qr-info">
           <strong>${t.name}</strong> • ${t.label}<br>
           <span style="font-size:12px; color:#555;">${t.type} (${t.orderId})</span>
+          ${t.note ? `<div style="margin-top:6px; font-weight:bold; color:#7c3aed; background:#f3e8ff; border:1px solid #d8b4fe; padding:4px 8px; border-radius:6px; font-size:12px;">🎁 Ghi chú: ${t.note}</div>` : ''}
         </div>
         <div class="qr-expected" style="background:${badgeColor}; color:#fff;">
           Dự kiến: ${t.expected}

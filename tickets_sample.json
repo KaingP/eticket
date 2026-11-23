@@ -16,7 +16,8 @@
       "ticketLabel": "Vé 1/2",
       "ticketNumber": 1,
       "ticketTypeName": "Vé Điện Tử (Player Pass QR)",
-      "unitPrice": 1000
+      "unitPrice": 1000,
+      "note": "voucher"
     },
     "HVC-50P368-F4F8": {
       "checkedIn": false,
@@ -34,7 +35,8 @@
       "ticketLabel": "Vé 2/2",
       "ticketNumber": 2,
       "ticketTypeName": "Vé Điện Tử (Player Pass QR)",
-      "unitPrice": 1000
+      "unitPrice": 1000,
+      "note": "quà tặng áo"
     },
     "HVC-K4YGBF-70EB": {
       "checkedIn": false,
@@ -52,7 +54,8 @@
       "ticketLabel": "Vé 1/1",
       "ticketNumber": 1,
       "ticketTypeName": "Vé Điện Tử (Player Pass QR)",
-      "unitPrice": 1000
+      "unitPrice": 1000,
+      "note": "voucher nước"
     },
     "HVC-5NS9YA-B711": {
       "checkedIn": false,
@@ -70,7 +73,8 @@
       "ticketLabel": "Vé 1/1",
       "ticketNumber": 1,
       "ticketTypeName": "Vé Điện Tử (Player Pass QR)",
-      "unitPrice": 1000
+      "unitPrice": 1000,
+      "note": ""
     },
     "HVC-6CJZG2-EE5C": {
       "checkedIn": true,
@@ -88,7 +92,8 @@
       "ticketLabel": "Vé 1/1",
       "ticketNumber": 1,
       "ticketTypeName": "Vé Điện Tử (Player Pass QR)",
-      "unitPrice": 1000
+      "unitPrice": 1000,
+      "note": "khách VIP"
     }
   }
 }

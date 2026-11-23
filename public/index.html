@@ -822,7 +822,10 @@
           </div>
           <div class="detail-row">
             <span class="detail-key">Ghi chú (Note):</span>
-            <span class="detail-val" id="m-note">--</span>
+            <span class="detail-val" style="display:inline-flex; align-items:center; gap:8px;">
+              <span id="m-note">--</span>
+              <button class="btn btn-secondary" style="padding:2px 8px; font-size:11px; height:auto;" onclick="promptEditCurrentModalNote()">✏ Sửa</button>
+            </span>
           </div>
         </div>
       </div>
@@ -1047,10 +1050,10 @@
           const isChecked = t.checkedIn === 1;
 
           // Note tag
-          let noteHtml = '-';
+          let noteHtml = `<span style="color:var(--text-muted); cursor:pointer; font-size:12px;" onclick="editTicketNote('${escapeHtml(t.code)}', '')" title="Thêm ghi chú">+ Thêm</span>`;
           if (t.note) {
             const isVoucher = t.note.toLowerCase().includes('voucher');
-            noteHtml = `<span class="note-tag ${isVoucher ? 'note-voucher' : ''}">${escapeHtml(t.note)}</span>`;
+            noteHtml = `<span class="note-tag ${isVoucher ? 'note-voucher' : ''}" style="cursor:pointer;" title="Ấn để sửa ghi chú" onclick="editTicketNote('${escapeHtml(t.code)}', '${escapeHtml(t.note)}')">${escapeHtml(t.note)}</span>`;
           }
 
           tr.innerHTML = `
@@ -1200,11 +1203,17 @@
     // 4. CHI TIẾT MÃ VÉ (Diagram 0: Ấn vào mã vé -> Đóng bảng)
     // ==========================================
 
+    let currentDetailTicketCode = null;
+    let currentDetailTicketNote = '';
+
     async function viewTicketDetail(code) {
       try {
         const res = await fetch(`/api/tickets/${encodeURIComponent(code)}`);
         if (!res.ok) throw new Error('Không tìm thấy vé');
         const t = await res.json();
+
+        currentDetailTicketCode = t.code;
+        currentDetailTicketNote = t.note || '';
 
         document.getElementById('m-code').innerText = t.code;
         document.getElementById('m-name').innerText = t.name || '-';
@@ -1226,6 +1235,38 @@
         document.getElementById('ticket-modal').style.display = 'flex';
       } catch (err) {
         alert('Không thể xem chi tiết vé: ' + err.message);
+      }
+    }
+
+    async function promptEditCurrentModalNote() {
+      if (!currentDetailTicketCode) return;
+      await editTicketNote(currentDetailTicketCode, currentDetailTicketNote);
+    }
+
+    async function editTicketNote(code, currentNote) {
+      const newNote = prompt(`Nhập ghi chú cho mã vé ${code} (để trống để xóa):`, currentNote || '');
+      if (newNote === null) return;
+
+      try {
+        const res = await fetch(`/api/tickets/${encodeURIComponent(code)}/note`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ note: newNote.trim() })
+        });
+        const data = await res.json();
+        if (data.success || data.status === 'OK') {
+          showToast('Đã cập nhật ghi chú');
+          currentDetailTicketNote = newNote.trim();
+          const modalNoteEl = document.getElementById('m-note');
+          if (modalNoteEl) {
+            modalNoteEl.innerText = currentDetailTicketNote || 'Không có';
+          }
+          loadTickets();
+        } else {
+          alert('Lỗi: ' + (data.message || 'Không thể cập nhật ghi chú'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối máy chủ');
       }
     }
 
