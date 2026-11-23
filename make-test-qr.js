@@ -11,6 +11,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 const TICKETS_FILE = path.join(DATA_DIR, 'tickets.json');
 const QR_OUT_DIR = path.join(DATA_DIR, 'test_qrs');
 const HTML_OUT_FILE = path.join(DATA_DIR, 'test-qr-print.html');
+const PUBLIC_HTML_OUT = path.join(__dirname, 'public', 'test-qr.html');
 
 if (!fs.existsSync(QR_OUT_DIR)) {
   fs.mkdirSync(QR_OUT_DIR, { recursive: true });
@@ -172,8 +173,10 @@ async function generateTestQrs() {
 </html>`;
 
   fs.writeFileSync(HTML_OUT_FILE, htmlContent, 'utf8');
+  fs.writeFileSync(PUBLIC_HTML_OUT, htmlContent, 'utf8');
   console.log(`----------------------------------------`);
   console.log(`[+] Đã tạo file HTML in ấn: ${HTML_OUT_FILE}`);
+  console.log(`[+] Đã tạo file xem trên web: ${PUBLIC_HTML_OUT}`);
   console.log(`[*] Mở file này trên trình duyệt để in hoặc quét trực tiếp từ màn hình.`);
   console.log(`========================================\n`);
 }
