@@ -13,6 +13,7 @@ const express = require('express');
 const QRCode = require('qrcode');
 const Database = require('better-sqlite3');
 const { exportData } = require('./export');
+const { importTicketsData } = require('./import');
 
 // Biến môi trường
 const PORT = parseInt(process.env.PORT || '443', 10);
@@ -49,6 +50,8 @@ db.exec(`
     checked_in INTEGER DEFAULT 0,
     checked_at TEXT,
     gate TEXT,
+    issued_at TEXT,
+    note TEXT,
     raw_json TEXT
   );
 
@@ -66,11 +69,21 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_scan_log_at ON scan_log(at);
 `);
 
+// Thêm cột nếu DB cũ chưa có
+try { db.exec(`ALTER TABLE tickets ADD COLUMN issued_at TEXT`); } catch (e) {}
+try { db.exec(`ALTER TABLE tickets ADD COLUMN note TEXT`); } catch (e) {}
+
 // Prepared Statements tối ưu tốc độ
 const stmtUpdateCheckin = db.prepare(`
   UPDATE tickets
   SET checked_in = 1, checked_at = ?, gate = ?
   WHERE code = ? AND checked_in = 0 AND status = 'VALID'
+`);
+
+const stmtUpdateCheckinAny = db.prepare(`
+  UPDATE tickets
+  SET checked_in = 1, checked_at = ?, gate = ?
+  WHERE code = ?
 `);
 
 const stmtGetTicket = db.prepare(`SELECT * FROM tickets WHERE code = ?`);
@@ -204,9 +217,9 @@ ${altNames.join('\n')}
 // Khởi tạo Express App
 const app = express();
 
-// Giới hạn body payload chống tấn công bộ nhớ
-app.use(express.json({ limit: '100kb' }));
-app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+// Giới hạn body payload (cho phép upload file CSV/JSON lên đến 20MB)
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 // Phục vụ tĩnh thư mục public (HTML/JS/CSS cục bộ hoàn toàn)
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -223,7 +236,7 @@ function handleCheckin(rawCode, rawGate) {
   if (!code) {
     return {
       httpStatus: 400,
-      body: { status: 'INVALID', message: 'Mã vé không được để trống' }
+      body: { status: 'INVALID', valid: false, message: 'Mã vé không được để trống' }
     };
   }
 
@@ -239,13 +252,16 @@ function handleCheckin(rawCode, rawGate) {
       httpStatus: 200,
       body: {
         status: 'OK',
+        valid: true,
         code: ticket.code,
         name: ticket.name,
         label: ticket.label,
         type: ticket.type,
         orderId: ticket.order_id,
+        note: ticket.note || '',
         at: now,
-        gate: gate
+        gate: gate,
+        message: 'Thành công!'
       }
     };
   }
@@ -261,6 +277,7 @@ function handleCheckin(rawCode, rawGate) {
       httpStatus: 200,
       body: {
         status: 'INVALID',
+        valid: false,
         code: code,
         message: 'Mã vé không tồn tại trong hệ thống'
       }
@@ -275,6 +292,7 @@ function handleCheckin(rawCode, rawGate) {
       httpStatus: 200,
       body: {
         status: 'NOT_VALID_STATUS',
+        valid: false,
         code: code,
         name: ticket.name,
         ticketStatus: ticket.status,
@@ -291,12 +309,13 @@ function handleCheckin(rawCode, rawGate) {
       httpStatus: 200,
       body: {
         status: 'DUPLICATE',
+        valid: false,
         code: code,
         name: ticket.name,
         label: ticket.label,
         at: ticket.checked_at,
         gate: ticket.gate,
-        message: 'Vé đã được check-in trước đó'
+        message: `Vé đã được soát lúc ${ticket.checked_at || ''} ${ticket.gate ? '(' + ticket.gate + ')' : ''}`
       }
     };
   }
@@ -305,32 +324,57 @@ function handleCheckin(rawCode, rawGate) {
   stmtInsertLog.run(code, 'ERROR', gate, now);
   return {
     httpStatus: 500,
-    body: { status: 'ERROR', message: 'Lỗi không xác định khi soát vé' }
+    body: { status: 'ERROR', valid: false, message: 'Lỗi không xác định khi soát vé' }
   };
 }
 
-// 1. API Quét QR
+// 1. API Quét QR (Diagram 1)
 app.post('/api/scan', (req, res) => {
   const { code, gate } = req.body;
   const result = handleCheckin(code, gate);
   res.status(result.httpStatus).json(result.body);
 });
 
-// 2. API Check-in thủ công
+// 2. API Check-in thủ công (Diagram 0: Thay đổi trạng thái thủ công từ "Chưa soát" -> "Đã soát")
 app.post('/api/manual-checkin', (req, res) => {
-  const { code, gate } = req.body;
-  const result = handleCheckin(code, gate);
-  res.status(result.httpStatus).json(result.body);
+  const { code, gate, toggle } = req.body;
+  const cleanCode = (code || '').trim().toUpperCase();
+  if (!cleanCode) {
+    return res.status(400).json({ status: 'INVALID', message: 'Mã vé không được để trống' });
+  }
+
+  const ticket = stmtGetTicket.get(cleanCode);
+  if (!ticket) {
+    return res.status(404).json({ status: 'INVALID', message: 'Mã vé không tồn tại trong hệ thống' });
+  }
+
+  const now = getVietnamISOString();
+  const gateName = (gate || 'Thủ công').trim();
+
+  if (ticket.checked_in === 1 && toggle) {
+    // Hoàn tác về Chưa soát
+    stmtUndoCheckin.run(cleanCode);
+    stmtInsertLog.run(cleanCode, 'UNDO', gateName, now);
+    console.log(`[MANUAL UNDO] Mã: ${cleanCode} -> Chưa soát`);
+    return res.json({ status: 'OK', checked_in: 0, checked_at: null, message: 'Đã hoàn tác trạng thái Chưa soát' });
+  } else {
+    // Đánh dấu Đã soát
+    stmtUpdateCheckinAny.run(now, gateName, cleanCode);
+    stmtInsertLog.run(cleanCode, 'OK', gateName, now);
+    console.log(`[MANUAL CHECKIN] Mã: ${cleanCode} -> Đã soát`);
+    return res.json({ status: 'OK', checked_in: 1, checked_at: now, message: 'Đã chuyển sang Đã soát' });
+  }
 });
 
-// 3. API Thống kê
+// 3. API Thống kê Dashboard (Diagram 2 & 3: Tất cả, Đã soát, Chưa soát + Refresh)
 app.get('/api/stats', (req, res) => {
   try {
     const stats = db.prepare(`
       SELECT
         COUNT(*) AS total_all,
-        SUM(CASE WHEN status = 'VALID' THEN 1 ELSE 0 END) AS total_valid,
         SUM(CASE WHEN checked_in = 1 THEN 1 ELSE 0 END) AS checked,
+        SUM(CASE WHEN checked_in = 0 THEN 1 ELSE 0 END) AS unchecked,
+        SUM(CASE WHEN status = 'VALID' THEN 1 ELSE 0 END) AS total_valid,
         SUM(CASE WHEN status = 'VALID' AND checked_in = 0 THEN 1 ELSE 0 END) AS remaining
       FROM tickets
     `).get();
@@ -367,9 +411,11 @@ app.get('/api/stats', (req, res) => {
     `).all();
 
     res.json({
+      all: stats.total_all || 0,
+      checked: stats.checked || 0,
+      unchecked: stats.unchecked || 0,
       total: stats.total_valid || 0,
       totalAll: stats.total_all || 0,
-      checked: stats.checked || 0,
       remaining: stats.remaining || 0,
       by_gate,
       recent_scans
@@ -379,7 +425,136 @@ app.get('/api/stats', (req, res) => {
   }
 });
 
-// 4. API Tìm kiếm tra tay
+// 4. API Lấy danh sách vé có lọc theo Dashboard, tìm kiếm mã vé, phân trang (Diagram 0, 2, 3)
+app.get('/api/tickets', (req, res) => {
+  try {
+    const status = req.query.status || 'all'; // 'all', 'checked', 'unchecked'
+    const search = (req.query.search || '').trim();
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit || '8', 10)), 100);
+    const offset = (page - 1) * limit;
+
+    let whereClauses = [];
+    let params = [];
+
+    if (status === 'checked') {
+      whereClauses.push('checked_in = 1');
+    } else if (status === 'unchecked') {
+      whereClauses.push('checked_in = 0');
+    }
+
+    if (search) {
+      whereClauses.push('(code LIKE ? OR name LIKE ? OR phone LIKE ? OR order_id LIKE ?)');
+      const p = `%${search}%`;
+      params.push(p, p, p, p);
+    }
+
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    const countSql = `SELECT COUNT(*) AS total FROM tickets ${whereSql}`;
+    const total = db.prepare(countSql).get(...params).total;
+
+    const dataSql = `
+      SELECT code, name, phone, email, order_id, label, type, status, checked_in, checked_at, gate, issued_at, note, raw_json
+      FROM tickets
+      ${whereSql}
+      ORDER BY 
+        CASE WHEN ? = '' THEN 1 ELSE 0 END,
+        checked_at DESC, 
+        order_id ASC, 
+        code ASC
+      LIMIT ? OFFSET ?
+    `;
+    const rows = db.prepare(dataSql).all(search, ...params, limit, offset);
+
+    const tickets = rows.map((r, idx) => ({
+      stt: offset + idx + 1,
+      code: r.code,
+      name: r.name || '',
+      email: r.email || '',
+      phone: r.phone || '',
+      orderId: r.order_id || '',
+      label: r.label || 'Vé 1/1',
+      type: r.type || 'Vé Sự Kiện',
+      status: r.status,
+      checkedIn: r.checked_in,
+      displayStatus: r.checked_in === 1 ? 'Đã soát' : 'Chưa soát',
+      checkedAt: r.checked_at,
+      issuedAt: r.issued_at,
+      gate: r.gate,
+      note: r.note || '',
+      rawJson: r.raw_json
+    }));
+
+    res.json({
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      tickets
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 5. API Chi tiết mã vé (Diagram 0: Xem chi tiết thông tin vé)
+app.get('/api/tickets/:code', (req, res) => {
+  const code = (req.params.code || '').trim().toUpperCase();
+  const ticket = stmtGetTicket.get(code);
+  if (!ticket) {
+    return res.status(404).json({ error: 'Không tìm thấy vé' });
+  }
+
+  let paymentInfo = '';
+  let customerInfo = {};
+  try {
+    if (ticket.raw_json) {
+      const parsed = JSON.parse(ticket.raw_json);
+      customerInfo = parsed;
+      const parts = [];
+      if (parsed.issuedBy) parts.push(`Nguồn: ${parsed.issuedBy}`);
+      if (parsed.payosOrderCode) parts.push(`Mã GD: ${parsed.payosOrderCode}`);
+      if (parsed.unitPrice) parts.push(`Giá: ${Number(parsed.unitPrice).toLocaleString('vi-VN')} đ`);
+      paymentInfo = parts.join(' | ');
+    }
+  } catch (e) {}
+
+  res.json({
+    code: ticket.code,
+    name: ticket.name,
+    email: ticket.email,
+    phone: ticket.phone,
+    orderId: ticket.order_id,
+    label: ticket.label,
+    type: ticket.type,
+    status: ticket.status,
+    checkedIn: ticket.checked_in,
+    displayStatus: ticket.checked_in === 1 ? 'Đã soát' : 'Chưa soát',
+    checkedAt: ticket.checked_at,
+    gate: ticket.gate,
+    issuedAt: ticket.issued_at,
+    note: ticket.note || '',
+    paymentInfo: paymentInfo,
+    rawDetails: customerInfo
+  });
+});
+
+// 6. API Nhập danh sách vé (Diagram 0: Nhập file .csv hoặc .json)
+app.post('/api/import', (req, res) => {
+  try {
+    const { filename, content } = req.body;
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, message: 'File lỗi: Dữ liệu rỗng' });
+    }
+    const result = importTicketsData(content, filename || '');
+    res.json(result);
+  } catch (err) {
+    console.error('[IMPORT ERROR]', err.message);
+    res.status(400).json({ success: false, message: 'File lỗi: ' + err.message });
+  }
+});
+
+// 7. API Tìm kiếm tra tay
 app.get('/api/search', (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q) {
@@ -399,7 +574,9 @@ app.get('/api/search', (req, res) => {
       status,
       checked_in,
       checked_at,
-      gate
+      gate,
+      issued_at,
+      note
     FROM tickets
     WHERE
       code LIKE ? OR
@@ -413,7 +590,7 @@ app.get('/api/search', (req, res) => {
   res.json(rows);
 });
 
-// 5. API Hoàn tác check-in (Yêu cầu PIN)
+// 8. API Hoàn tác check-in (Yêu cầu PIN)
 app.post('/api/undo', (req, res) => {
   const { code, pin } = req.body;
   if (!pin || String(pin) !== String(ADMIN_PIN)) {
@@ -437,7 +614,7 @@ app.post('/api/undo', (req, res) => {
   }
 });
 
-// 6. API Xuất dữ liệu vé (CSV hoặc JSON)
+// 9. API Xuất dữ liệu vé (CSV hoặc JSON)
 app.get('/api/export', (req, res) => {
   const pin = req.headers['x-admin-pin'] || req.query.pin;
   if (!pin || String(pin) !== String(ADMIN_PIN)) {
@@ -462,14 +639,13 @@ app.get('/api/export', (req, res) => {
   }
 });
 
-// 7. API Tải file Database SQLite backup
+// 10. API Tải file Database SQLite backup
 app.get('/api/backup/download', (req, res) => {
   const pin = req.headers['x-admin-pin'] || req.query.pin;
   if (!pin || String(pin) !== String(ADMIN_PIN)) {
     return res.status(403).json({ error: 'Mã PIN quản trị không chính xác' });
   }
 
-  // Thực hiện backup an toàn ra file tạm rồi gửi về
   const tempBackupFile = path.join(BACKUP_DIR, `manual_download_${Date.now()}.db`);
   db.backup(tempBackupFile)
     .then(() => {
@@ -482,7 +658,7 @@ app.get('/api/backup/download', (req, res) => {
     });
 });
 
-// 8. API Xem danh sách vé cho Admin có phân trang / lọc
+// 11. API Xem danh sách vé cho Admin có phân trang / lọc
 app.get('/api/admin/tickets', (req, res) => {
   const pin = req.headers['x-admin-pin'] || req.query.pin;
   if (!pin || String(pin) !== String(ADMIN_PIN)) {
@@ -516,7 +692,7 @@ app.get('/api/admin/tickets', (req, res) => {
   const total = db.prepare(countSql).get(...params).total;
 
   const dataSql = `
-    SELECT code, name, phone, email, order_id, label, type, status, checked_in, checked_at, gate
+    SELECT code, name, phone, email, order_id, label, type, status, checked_in, checked_at, gate, issued_at, note
     FROM tickets
     ${whereSql}
     ORDER BY checked_at DESC, order_id ASC, code ASC
@@ -527,7 +703,7 @@ app.get('/api/admin/tickets', (req, res) => {
   res.json({ total, limit, offset, items });
 });
 
-// 9. API Lấy thông tin mạng LAN & Mã QR truy cập
+// 12. API Lấy thông tin mạng LAN & Mã QR truy cập
 app.get('/api/system-info', async (req, res) => {
   const primaryIp = getPrimaryIp();
   const allIps = getLanIps();
@@ -554,7 +730,7 @@ app.get('/api/system-info', async (req, res) => {
   }
 });
 
-// 10. Trang QR to toàn màn hình để nhân viên quét trực tiếp
+// 13. Trang QR to toàn màn hình để nhân viên quét trực tiếp
 app.get('/qr', async (req, res) => {
   const primaryIp = getPrimaryIp();
   const portPart = PORT === 443 ? '' : `:${PORT}`;
@@ -669,8 +845,7 @@ app.get('/qr', async (req, res) => {
       Không cần gõ địa chỉ IP!
     </div>
     <div class="links">
-      <a href="/" class="btn">Vào trang soát vé</a>
-      <a href="${adminUrl}" class="btn" style="background:#334155;">Quản lý</a>
+      <a href="/" class="btn">Vào Cổng Soát Vé</a>
     </div>
   </div>
 </body>
@@ -718,7 +893,6 @@ function performAutoBackup() {
 }
 
 async function startServer() {
-  // Lấy IP LAN hiện tại
   const primaryIp = getPrimaryIp();
   const allIps = getLanIps();
 
@@ -748,16 +922,14 @@ async function startServer() {
   httpsServer.listen(PORT, '0.0.0.0', async () => {
     const portPart = PORT === 443 ? '' : `:${PORT}`;
     const primaryUrl = `https://${primaryIp}${portPart}`;
-    const adminUrl = `https://${primaryIp}${portPart}/admin.html`;
     const qrPageUrl = `https://${primaryIp}${portPart}/qr`;
 
     console.log(`\n=====================================================================`);
-    console.log(`🎉 HÙNG VƯƠNG CONCERT: GAME ON - MÁY CHỦ SOÁT VÉ LAN ĐÃ SẴN SÀNG!`);
+    console.log(`🎉 HÙNG VƯƠNG CONCERT: GAME ON - CỔNG SOÁT VÉ LAN ĐÃ SẴN SÀNG!`);
     console.log(`=====================================================================`);
     console.log(`[📶 MẠNG LAN TỰ ĐỘNG - KHÔNG CẦN INTERNET, KHÔNG CẦN CÀI IP TĨNH]`);
     console.log(`[*] IP Máy chủ phát hiện được: ${primaryIp}`);
-    console.log(`[*] Link soát vé:              ${primaryUrl}`);
-    console.log(`[*] Link quản trị (Admin):     ${adminUrl} (PIN: ${ADMIN_PIN})`);
+    console.log(`[*] Link Cổng Soát Vé:         ${primaryUrl}`);
     console.log(`---------------------------------------------------------------------`);
     console.log(`📱 MÃ QR DÀNH CHO ĐIỆN THOẠI NHÂN VIÊN (BẬT CAMERA QUÉT ĐỂ VÀO NGAY):`);
 

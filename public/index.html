@@ -3,100 +3,529 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Soát Vé - Hùng Vương Concert: GAME ON</title>
+  <title>Cổng soát vé - Hùng Vương Concert: GAME ON</title>
   <script src="/html5-qrcode.min.js"></script>
   <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --accent: #38bdf8;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
-      user-select: none;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #0f172a;
-      color: #f8fafc;
-      height: 100dvh;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
     }
-    /* Thanh trạng thái mất mạng */
-    #offline-banner {
+
+    /* Offline Alert */
+    #offline-alert {
       display: none;
-      background: #dc2626;
+      background: var(--danger);
       color: #fff;
       text-align: center;
-      padding: 10px;
-      font-size: 15px;
-      font-weight: 800;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 700;
       letter-spacing: 0.5px;
-      animation: pulse 1.2s infinite;
-      z-index: 9999;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
     }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
+
     /* Header */
     header {
-      background: #1e293b;
-      padding: 8px 12px;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--card-border);
+      padding: 14px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid #334155;
-      gap: 8px;
+      flex-wrap: wrap;
+      gap: 12px;
     }
-    .header-left {
+    .header-title-box h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    .header-title-box p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+    .btn-secondary {
+      background: #1f2937;
+      color: #e5e7eb;
+      border-color: #374151;
+    }
+    .btn-secondary:hover {
+      background: #374151;
+    }
+    .btn-icon {
+      padding: 8px;
+    }
+
+    /* Container chính */
+    .container {
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px;
+      flex: 1;
       display: flex;
       flex-direction: column;
+      gap: 20px;
     }
-    .event-title {
-      font-size: 14px;
+
+    /* Dashboard Thẻ Đếm (Diagram 2 & 3) */
+    .dashboard-section {
+      display: flex;
+      align-items: stretch;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .stat-card {
+      flex: 1;
+      min-width: 140px;
+      background: var(--card-bg);
+      border: 2px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .stat-card:hover {
+      border-color: #374151;
+    }
+    .stat-card.active {
+      border-color: var(--accent);
+      background: #0c1a2e;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+    }
+    .stat-val {
+      font-size: 32px;
       font-weight: 800;
-      color: #38bdf8;
+      color: #fff;
+      line-height: 1.1;
+    }
+    .stat-card.active .stat-val {
+      color: var(--accent);
+    }
+    .stat-card.checked .stat-val {
+      color: var(--success);
+    }
+    .stat-card.unchecked .stat-val {
+      color: var(--warning);
+    }
+    .stat-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-top: 4px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    .gate-container {
+    .refresh-box {
       display: flex;
       align-items: center;
-      gap: 4px;
-      margin-top: 2px;
     }
-    .gate-label {
-      font-size: 11px;
-      color: #94a3b8;
+    .btn-refresh {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
     }
-    .gate-input {
-      background: #0f172a;
-      border: 1px solid #475569;
-      color: #f1f5f9;
-      font-size: 12px;
+    .btn-refresh:hover {
+      color: #fff;
+      border-color: #4b5563;
+      background: #1f2937;
+    }
+
+    /* Thanh Tìm kiếm (Diagram 0) */
+    .search-toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .search-box {
+      flex: 1;
+      min-width: 260px;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .search-input {
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: #fff;
+      font-size: 14px;
+      padding: 10px 14px 10px 38px;
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      color: var(--text-muted);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+    }
+    .search-clear {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 16px;
+      cursor: pointer;
+      display: none;
+    }
+
+    /* Bảng danh sách vé (Diagram 0, 2, 3) */
+    .table-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .table-container {
+      overflow-x: auto;
+      max-width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    th {
+      background: #151e2f;
+      color: var(--text-muted);
       font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 4px;
-      width: 90px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--card-border);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
-    .header-right {
-      text-align: right;
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #1a2333;
+      color: #e5e7eb;
     }
-    .stats-badge {
-      background: #0369a1;
+    tr:hover td {
+      background: #162032;
+    }
+    .ticket-code-link {
+      color: var(--accent);
+      font-family: monospace;
+      font-weight: 700;
+      text-decoration: underline;
+      cursor: pointer;
+      background: rgba(56, 189, 248, 0.1);
       padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+    .ticket-code-link:hover {
+      background: rgba(56, 189, 248, 0.2);
+    }
+
+    /* Trạng thái */
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
       border-radius: 6px;
       font-size: 12px;
       font-weight: 700;
-      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s;
     }
-    .stats-count {
-      color: #38bdf8;
+    .badge-checked {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-checked:hover {
+      background: rgba(16, 185, 129, 0.25);
+    }
+    .badge-unchecked {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .badge-unchecked:hover {
+      background: rgba(245, 158, 11, 0.25);
+    }
+    .note-tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #374151;
+      color: #d1d5db;
+    }
+    .note-voucher {
+      background: rgba(168, 85, 247, 0.2);
+      color: #c084fc;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      font-weight: 600;
+    }
+
+    /* Phân trang (Diagram 0: < 1 2 3 ... >) */
+    .pagination-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 18px;
+      border-top: 1px solid var(--card-border);
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .page-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .page-btn {
+      background: #1f2937;
+      border: 1px solid #374151;
+      color: #e5e7eb;
+      min-width: 32px;
+      height: 32px;
+      padding: 0 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .page-btn:hover:not(:disabled) {
+      background: #374151;
+    }
+    .page-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .page-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Modal dùng chung */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 2000;
+    }
+    .modal-box {
+      background: var(--card-bg);
+      border: 1px solid #374151;
+      border-radius: 14px;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+      animation: modalFadeIn 0.15s ease-out;
+    }
+    @keyframes modalFadeIn {
+      from { transform: scale(0.96); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .modal-body {
+      padding: 20px;
+    }
+    .modal-footer {
+      padding: 14px 20px;
+      background: #0d131f;
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* Chi tiết mã vé */
+    .detail-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
       font-size: 14px;
     }
-    /* Vùng Camera */
-    #reader-container {
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px dashed #243042;
+      padding-bottom: 8px;
+      gap: 12px;
+    }
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+    .detail-key {
+      color: var(--text-muted);
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .detail-val {
+      color: #fff;
+      font-weight: 600;
+      text-align: right;
+      word-break: break-all;
+    }
+
+    /* Modal Nhập Danh Sách */
+    .dropzone {
+      border: 2px dashed #374151;
+      border-radius: 10px;
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #0c121d;
+    }
+    .dropzone:hover {
+      border-color: var(--accent);
+      background: #111a29;
+    }
+    .dropzone-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+    .dropzone-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    #file-selected-name {
+      margin-top: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      word-break: break-all;
+    }
+
+    /* GIAO DIỆN SOÁT VÉ - QUÉT MÃ QR (Diagram 1) */
+    #scanner-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #000;
+      display: none;
+      flex-direction: column;
+      z-index: 3000;
+    }
+    .scanner-header {
+      background: rgba(17, 24, 39, 0.95);
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1f2937;
+      z-index: 10;
+    }
+    .scanner-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .scanner-camera-box {
       flex: 1;
       position: relative;
       background: #000;
@@ -105,723 +534,793 @@
       justify-content: center;
       overflow: hidden;
     }
-    #reader {
+    #camera-reader {
       width: 100% !important;
       height: 100% !important;
-      border: none !important;
     }
-    #reader video {
-      width: 100% !important;
-      height: 100% !important;
+    #camera-reader video {
       object-fit: cover !important;
+      width: 100% !important;
+      height: 100% !important;
     }
-    /* Aim Box Guide */
-    .scan-aim {
+    /* Khung ngắm quét */
+    .scan-target-box {
       position: absolute;
       width: 250px;
       height: 250px;
-      border: 2px solid rgba(56, 189, 248, 0.7);
+      border: 2px solid rgba(56, 189, 248, 0.8);
       border-radius: 16px;
       pointer-events: none;
-      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.45);
+      z-index: 5;
     }
-    .scan-aim::before {
-      content: "";
+    .scan-target-box::before {
+      content: '';
       position: absolute;
-      width: 90%;
-      height: 2px;
-      background: #38bdf8;
-      box-shadow: 0 0 8px #38bdf8;
-      animation: scanAnim 2s infinite ease-in-out;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: var(--accent);
+      animation: scanSweep 2s infinite ease-in-out;
+      box-shadow: 0 0 8px var(--accent);
     }
-    @keyframes scanAnim {
-      0% { transform: translateY(-110px); }
-      50% { transform: translateY(110px); }
-      100% { transform: translateY(-110px); }
+    @keyframes scanSweep {
+      0%, 100% { top: 0; }
+      50% { top: calc(100% - 3px); }
     }
-    /* Nút công cụ camera trên màn hình */
-    .camera-tools {
+
+    /* Thông báo kết quả quét (Thành công! / Không hợp lệ) */
+    #scan-result-card {
       position: absolute;
-      top: 12px;
-      right: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      z-index: 50;
-    }
-    .tool-btn {
-      background: rgba(15, 23, 42, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 24px 20px;
+      border-radius: 20px 20px 0 0;
       color: #fff;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      display: flex;
+      display: none;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      cursor: pointer;
-      backdrop-filter: blur(4px);
+      text-align: center;
+      z-index: 20;
+      animation: slideUp 0.2s ease-out;
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.7);
     }
-    .tool-btn:active {
-      transform: scale(0.92);
-      background: #38bdf8;
-      color: #0f172a;
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
     }
-    /* Thanh công cụ dưới đáy */
-    footer {
-      background: #1e293b;
-      padding: 8px 12px;
+    #scan-result-card.success {
+      background: #065f46;
+      border-top: 3px solid #10b981;
+    }
+    #scan-result-card.invalid {
+      background: #7f1d1d;
+      border-top: 3px solid #ef4444;
+    }
+    .scan-status-title {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .scan-note-badge {
+      background: #fbbf24;
+      color: #78350f;
+      font-weight: 800;
+      font-size: 14px;
+      padding: 4px 12px;
+      border-radius: 6px;
+      margin-top: 4px;
+      margin-bottom: 8px;
+      display: none;
+    }
+    .scan-info-text {
+      font-size: 15px;
+      color: #e5e7eb;
+      margin-bottom: 12px;
+    }
+
+    /* Popup "Quét mã tiếp theo?" (Diagram 1) */
+    .scanner-next-popup {
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 12px;
+      padding: 16px 20px;
+      width: 90%;
+      max-width: 360px;
+      text-align: center;
+      margin-top: 10px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    .scanner-next-popup h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 14px;
+    }
+    .scanner-next-actions {
       display: flex;
-      gap: 8px;
-      border-top: 1px solid #334155;
+      gap: 12px;
+      justify-content: center;
     }
-    .search-btn-trigger {
+    .scanner-next-actions button {
       flex: 1;
-      background: #334155;
-      color: #f8fafc;
-      border: 1px solid #475569;
-      padding: 10px;
+      padding: 10px 16px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    /* Toast Alert */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f2937;
+      color: #fff;
+      padding: 10px 20px;
       border-radius: 8px;
       font-size: 14px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      cursor: pointer;
-    }
-    .admin-link-btn {
-      background: #0f172a;
-      color: #94a3b8;
-      border: 1px solid #334155;
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-size: 13px;
-      text-decoration: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    /* Overlay kết quả toàn màn hình (CỰC TO & RÕ NÉT) */
-    #result-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 99999;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 24px;
-      text-align: center;
-      color: #fff;
-      animation: popIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-    @keyframes popIn {
-      from { transform: scale(0.92); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-    #result-overlay.status-ok {
-      background: #059669; /* Xanh lá đậm */
-    }
-    #result-overlay.status-duplicate {
-      background: #d97706; /* Màu cam đậm */
-    }
-    #result-overlay.status-invalid {
-      background: #dc2626; /* Màu đỏ */
-    }
-    .res-icon {
-      font-size: 72px;
-      margin-bottom: 12px;
-      line-height: 1;
-    }
-    .res-title {
-      font-size: 36px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 12px;
-      line-height: 1.1;
-    }
-    .res-name {
-      font-size: 26px;
-      font-weight: 800;
-      margin-bottom: 8px;
-      background: rgba(0, 0, 0, 0.25);
-      padding: 8px 16px;
-      border-radius: 8px;
-      max-width: 95%;
-      word-break: break-word;
-    }
-    .res-detail {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 6px;
-      opacity: 0.95;
-    }
-    .res-sub {
-      font-size: 15px;
-      margin-top: 8px;
-      opacity: 0.85;
-      font-family: monospace;
-    }
-    .res-tap-hint {
-      position: absolute;
-      bottom: 24px;
-      font-size: 13px;
       font-weight: 600;
-      background: rgba(0, 0, 0, 0.3);
-      padding: 8px 18px;
-      border-radius: 20px;
-      letter-spacing: 0.5px;
-    }
-    /* Modal Tra Cứu Thủ Công */
-    #search-modal {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+      border: 1px solid #374151;
       display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(15, 23, 42, 0.9);
-      z-index: 10000;
-      padding: 16px;
-      flex-direction: column;
-      backdrop-filter: blur(8px);
+      z-index: 9999;
     }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
+    #toast.error {
+      background: #991b1b;
+      border-color: #ef4444;
     }
-    .modal-title {
-      font-size: 17px;
-      font-weight: 800;
-      color: #38bdf8;
-    }
-    .close-modal-btn {
-      background: #334155;
-      color: #fff;
-      border: none;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      font-size: 18px;
-      cursor: pointer;
-    }
-    .search-box-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .search-input {
-      flex: 1;
-      background: #1e293b;
-      border: 1px solid #475569;
-      color: #fff;
-      padding: 10px 12px;
-      border-radius: 8px;
-      font-size: 15px;
-      user-select: text;
-    }
-    .search-input:focus {
-      outline: none;
-      border-color: #38bdf8;
-    }
-    .search-submit-btn {
-      background: #0284c7;
-      color: #fff;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 8px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    .search-results-list {
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .ticket-card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      padding: 12px;
-      border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .ticket-info {
-      flex: 1;
-    }
-    .t-name {
-      font-size: 15px;
-      font-weight: 700;
-      color: #f1f5f9;
-    }
-    .t-code {
-      font-family: monospace;
-      font-size: 13px;
-      color: #38bdf8;
-      margin: 2px 0;
-    }
-    .t-meta {
-      font-size: 12px;
-      color: #94a3b8;
-    }
-    .checkin-action-btn {
-      background: #059669;
-      color: #fff;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
-      white-space: nowrap;
-      margin-left: 8px;
-    }
-    .badge-in {
-      background: #0284c7;
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-    .badge-cancelled {
-      background: #dc2626;
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 700;
-      white-space: nowrap;
+    #toast.success {
+      background: #065f46;
+      border-color: #10b981;
     }
   </style>
 </head>
 <body>
 
-  <!-- Banner Cảnh báo mất kết nối Server -->
-  <div id="offline-banner">
-    ⚠️ MẤT KẾT NỐI SERVER - TẠM DỪNG SOÁT VÉ!
-  </div>
+  <!-- Mất kết nối banner -->
+  <div id="offline-alert">⚠ MẤT KẾT NỐI ĐẾN MÁY CHỦ - VUI LÒNG KIỂM TRA MẠNG WI-FI</div>
 
   <!-- Header -->
   <header>
-    <div class="header-left">
-      <span class="event-title">GAME ON 🎫 SOÁT VÉ</span>
-      <div class="gate-container">
-        <span class="gate-label">Vị trí:</span>
-        <span style="font-size:12px; font-weight:700; color:#38bdf8; background:#0f172a; padding:2px 8px; border-radius:4px; border:1px solid #334155;">Cổng Chính</span>
-        <input type="hidden" id="gate-input" value="Cổng chính">
-      </div>
+    <div class="header-title-box">
+      <h1>Cổng soát vé</h1>
+      <p>Hùng Vương Concert: GAME ON • Hệ thống offline LAN</p>
     </div>
-    <div class="header-right" style="display:flex; align-items:center; gap:6px;">
-      <button id="open-qr-share-btn" class="tool-btn" style="width:34px; height:34px; font-size:15px;" title="Chia sẻ mã QR cho nhân viên khác">📱</button>
-      <div class="stats-badge">
-        Đã vào: <span id="stats-checked" class="stats-count">0</span> / <span id="stats-total">0</span>
-      </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" id="btn-open-scanner" onclick="openScanner()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+        Soát vé
+      </button>
+      <button class="btn btn-secondary" onclick="openImportModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Nhập danh sách
+      </button>
     </div>
   </header>
 
-  <!-- Vùng Camera Quét QR -->
-  <div id="reader-container">
-    <div id="reader"></div>
-    <div class="scan-aim"></div>
+  <!-- Container -->
+  <main class="container">
 
-    <div class="camera-tools">
-      <button id="torch-btn" class="tool-btn" title="Bật/Tắt Flash">⚡</button>
-      <button id="flip-camera-btn" class="tool-btn" title="Đổi Camera">🔄</button>
-    </div>
-  </div>
-
-  <!-- Footer -->
-  <footer>
-    <button id="open-search-btn" class="search-btn-trigger">
-      🔍 Tra cứu thủ công (Mã / Tên / SĐT)
-    </button>
-    <a href="/admin.html" class="admin-link-btn">⚙ Quản lý</a>
-  </footer>
-
-  <!-- Overlay Kết Quả Toàn Màn Hình -->
-  <div id="result-overlay">
-    <div id="res-icon" class="res-icon">✔</div>
-    <div id="res-title" class="res-title">OK</div>
-    <div id="res-name" class="res-name">Tên Khách Hàng</div>
-    <div id="res-detail" class="res-detail">Chi tiết vé</div>
-    <div id="res-sub" class="res-sub">Mã vé</div>
-    <div class="res-tap-hint">Chạm màn hình để tiếp tục</div>
-  </div>
-
-  <!-- Modal Tra Cứu Thủ Công -->
-  <div id="search-modal">
-    <div class="modal-header">
-      <div class="modal-title">Tra cứu vé thủ công</div>
-      <button id="close-search-btn" class="close-modal-btn">✕</button>
-    </div>
-    <div class="search-box-row">
-      <input type="text" id="search-query-input" class="search-input" placeholder="Nhập mã vé, SĐT hoặc Tên khách...">
-      <button id="search-action-btn" class="search-submit-btn">Tìm</button>
-    </div>
-    <div id="search-results-list" class="search-results-list">
-      <!-- Kết quả đổ vào đây -->
-    </div>
-  </div>
-
-  <!-- Modal Chia sẻ Mã QR cho nhân viên khác -->
-  <div id="share-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.92); z-index:10001; padding:20px; flex-direction:column; justify-content:center; align-items:center; backdrop-filter:blur(8px); text-align:center;">
-    <div style="background:#1e293b; border:1px solid #334155; border-radius:16px; padding:24px; max-width:340px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
-      <h3 style="color:#38bdf8; font-size:17px; margin-bottom:4px;">QR KẾT NỐI SOÁT VÉ</h3>
-      <p style="color:#94a3b8; font-size:12px; margin-bottom:16px;">Mở Camera điện thoại khác quét mã này</p>
-      <div style="background:#fff; padding:12px; border-radius:12px; display:inline-block; margin-bottom:12px;">
-        <img id="share-qr-img" src="" alt="QR" style="width:200px; height:200px; display:block;">
+    <!-- Dashboard Thẻ Đếm (Diagram 2 & Diagram 3: Lọc danh sách theo Dashboard) -->
+    <section class="dashboard-section">
+      <div class="stat-card active" id="card-all" onclick="setFilter('all')">
+        <div class="stat-val" id="stat-all">--</div>
+        <div class="stat-label">Tất cả</div>
       </div>
-      <div id="share-qr-url" style="font-family:monospace; font-size:12px; color:#38bdf8; word-break:break-all; margin-bottom:16px; background:#0f172a; padding:6px 10px; border-radius:6px;">---</div>
-      <button id="close-share-btn" style="background:#334155; color:#fff; border:none; padding:8px 24px; border-radius:8px; font-weight:700; cursor:pointer;">Đóng</button>
+      <div class="stat-card checked" id="card-checked" onclick="setFilter('checked')">
+        <div class="stat-val" id="stat-checked">--</div>
+        <div class="stat-label">Đã soát</div>
+      </div>
+      <div class="stat-card unchecked" id="card-unchecked" onclick="setFilter('unchecked')">
+        <div class="stat-val" id="stat-unchecked">--</div>
+        <div class="stat-label">Chưa soát</div>
+      </div>
+      <div class="refresh-box">
+        <button class="btn-refresh" onclick="refreshDashboard()" title="Làm mới dữ liệu từ CSDL">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M2.5 22v-6h6"/><path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8"/><path d="M22 12.5a10 10 0 0 1-18.8 4.2L2.5 16"/></svg>
+          Refresh
+        </button>
+      </div>
+    </section>
+
+    <!-- Thanh tìm kiếm (Diagram 0: Nhập mã vé, nhấn "Enter") -->
+    <section class="search-toolbar">
+      <div class="search-box">
+        <span class="search-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <input type="text" id="search-input" class="search-input" placeholder="Tìm kiếm mã vé (nhấn Enter để tìm)..." onkeydown="handleSearchKey(event)">
+        <button class="search-clear" id="search-clear-btn" onclick="clearSearch()">✕</button>
+      </div>
+    </section>
+
+    <!-- Bảng danh sách vé (Diagram 0, 2, 3) -->
+    <section class="table-card">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 50px;">STT</th>
+              <th>Tên khách hàng</th>
+              <th>Email</th>
+              <th>Thời điểm mua vé</th>
+              <th>Mã vé</th>
+              <th>Số lượng vé</th>
+              <th>Trạng thái</th>
+              <th>Thời điểm check in</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody id="tickets-table-body">
+            <tr>
+              <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-muted);">Đang tải dữ liệu...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Phân trang (Diagram 0: < 1 2 3 ... >) -->
+      <div class="pagination-bar">
+        <div id="page-info">Hiển thị 0 vé</div>
+        <div class="page-controls" id="page-controls">
+          <!-- Các nút phân trang render tự động -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: CHI TIẾT MÃ VÉ (Diagram 0) -->
+  <div class="modal-backdrop" id="ticket-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Chi tiết mã vé</h2>
+        <button class="btn btn-secondary btn-icon" onclick="closeTicketModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-list">
+          <div class="detail-row">
+            <span class="detail-key">Mã vé:</span>
+            <span class="detail-val" id="m-code" style="color: var(--accent); font-family: monospace;">--</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-key">Tên khách hàng:</span>
+            <span class="detail-val" id="m-name">--</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-key">Email:</span>
+            <span class="detail-val" id="m-email">--</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-key">Số điện thoại:</span>
+            <span class="detail-val" id="m-phone">--</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-key">Thời điểm mua vé:</span>
+            <span class="detail-val" id="m-issued">--</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-key">Mã đơn hàng:</span>
+            <span class="detail-val" id="m-order">--</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-key">Thông tin chuyển khoản:</span>
+            <span class="detail-val" id="m-payment">--</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-key">Số lượng / Loại vé:</span>
+            <span class="detail-val" id="m-label-type">--</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-key">Trạng thái:</span>
+            <span class="detail-val" id="m-status">--</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-key">Thời điểm check in:</span>
+            <span class="detail-val" id="m-checked-at">--</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-key">Ghi chú (Note):</span>
+            <span class="detail-val" id="m-note">--</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeTicketModal()">Đóng bảng</button>
+      </div>
     </div>
   </div>
+
+  <!-- MODAL: NHẬP DANH SÁCH (Diagram 0: .csv, .json) -->
+  <div class="modal-backdrop" id="import-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Nhập danh sách mã vé</h2>
+        <button class="btn btn-secondary btn-icon" onclick="closeImportModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="dropzone" onclick="document.getElementById('file-input').click()">
+          <div class="dropzone-icon">📁</div>
+          <div style="font-weight: 700; font-size: 15px;">Ấn vào đây để chọn file (.csv hoặc .json)</div>
+          <div class="dropzone-hint">Hỗ trợ file vé xuất từ PayOS hoặc bảng tính Excel CSV</div>
+          <div id="file-selected-name"></div>
+        </div>
+        <input type="file" id="file-input" accept=".csv,.json" style="display: none;" onchange="handleFileSelected(event)">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeImportModal()">Đóng</button>
+        <button class="btn btn-primary" id="btn-confirm-import" onclick="confirmImport()" disabled>Xác nhận</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GIAO DIỆN SOÁT VÉ - QUÉT MÃ QR (Diagram 1) -->
+  <div id="scanner-overlay">
+    <div class="scanner-header">
+      <div class="scanner-title">Soát vé (Quét mã QR)</div>
+      <button class="btn btn-secondary" onclick="closeScanner()">✕ Thoát</button>
+    </div>
+
+    <div class="scanner-camera-box">
+      <div id="camera-reader"></div>
+      <div class="scan-target-box"></div>
+
+      <!-- Khung kết quả quét (Thành công / Không hợp lệ) -->
+      <div id="scan-result-card">
+        <div class="scan-status-title" id="scan-res-title">Thành công!</div>
+        <div class="scan-note-badge" id="scan-res-note">Ghi chú: voucher</div>
+        <div class="scan-info-text" id="scan-res-info">Nguyễn Đức Trung • Vé 1/2</div>
+
+        <!-- Popup: Quét mã tiếp theo? (Diagram 1) -->
+        <div class="scanner-next-popup" id="scan-next-popup">
+          <h3>Quét mã tiếp theo?</h3>
+          <div class="scanner-next-actions">
+            <button class="btn btn-primary" onclick="confirmNextScan()">Xác nhận</button>
+            <button class="btn btn-secondary" onclick="closeScanner()">Thoát</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Message -->
+  <div id="toast"></div>
 
   <script>
-    // Xử lý mở Modal Share QR
-    const shareModal = document.getElementById('share-modal');
-    const openQrShareBtn = document.getElementById('open-qr-share-btn');
-    const closeShareBtn = document.getElementById('close-share-btn');
-    const shareQrImg = document.getElementById('share-qr-img');
-    const shareQrUrl = document.getElementById('share-qr-url');
+    // State của ứng dụng
+    let currentFilter = 'all'; // 'all', 'checked', 'unchecked' (Diagram 3: 'all' là mặc định)
+    let currentSearch = '';
+    let currentPage = 1;
+    const pageLimit = 8; // Khớp với wireframe hiển thị 8 hàng
+    let selectedFileContent = null;
+    let selectedFileName = '';
 
-    openQrShareBtn.addEventListener('click', async () => {
-      try {
-        const res = await fetch('/api/system-info');
-        const info = await res.json();
-        shareQrImg.src = info.qrDataUrl;
-        shareQrUrl.innerText = info.primaryUrl;
-        shareModal.style.display = 'flex';
-      } catch (err) {
-        alert('Lỗi lấy mã QR chia sẻ!');
-      }
-    });
+    // Trình quét QR
+    let html5QrCode = null;
+    let isCameraScanning = false;
+    let isScanPaused = false; // "Tạm dừng Camera 1.5 giây (chống quét đúp)"
 
-    closeShareBtn.addEventListener('click', () => {
-      shareModal.style.display = 'none';
-    });
-    // 1. Quản lý Tên Cổng (localStorage)
-    const gateInput = document.getElementById('gate-input');
-    const savedGate = localStorage.getItem('soatve_gate_name');
-    if (savedGate) gateInput.value = savedGate;
-    gateInput.addEventListener('change', () => {
-      localStorage.setItem('soatve_gate_name', gateInput.value.trim() || 'Cổng 1');
-    });
-
-    // 2. Web Audio API (Âm bíp độc lập không cần file ngoài)
+    // WebAudio
     let audioCtx = null;
-    function initAudio() {
+    function getAudioContext() {
       if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) audioCtx = new AudioContextClass();
       }
-      if (audioCtx.state === 'suspended') {
+      if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
+      return audioCtx;
     }
-    // Kích hoạt audio context ngay khi user chạm vào trang
-    window.addEventListener('click', initAudio, { once: true });
-    window.addEventListener('touchstart', initAudio, { once: true });
 
     function playBeep(type) {
       try {
-        initAudio();
-        if (!audioCtx) return;
-        const now = audioCtx.currentTime;
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
 
-        if (type === 'OK') {
-          // Bíp đôi âm vực cao thanh thoát
-          const osc1 = audioCtx.createOscillator();
-          const gain1 = audioCtx.createGain();
-          osc1.type = 'sine';
-          osc1.frequency.setValueAtTime(880, now);
-          gain1.gain.setValueAtTime(0.35, now);
-          gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-          osc1.connect(gain1);
-          gain1.connect(audioCtx.destination);
-          osc1.start(now);
-          osc1.stop(now + 0.1);
-
-          const osc2 = audioCtx.createOscillator();
-          const gain2 = audioCtx.createGain();
-          osc2.type = 'sine';
-          osc2.frequency.setValueAtTime(1320, now + 0.12);
-          gain2.gain.setValueAtTime(0.35, now + 0.12);
-          gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
-          osc2.connect(gain2);
-          gain2.connect(audioCtx.destination);
-          osc2.start(now + 0.12);
-          osc2.stop(now + 0.25);
-        } else if (type === 'DUPLICATE') {
-          // Còi trầm cảnh báo 2 nhịp
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(260, now);
-          osc.frequency.linearRampToValueAtTime(180, now + 0.35);
-          gain.gain.setValueAtTime(0.4, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
+        const now = ctx.currentTime;
+        if (type === 'success') {
+          // Âm thanh cao vui tai
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, now); // D5
+          osc.frequency.setValueAtTime(880, now + 0.1); // A5
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
           osc.start(now);
           osc.stop(now + 0.35);
         } else {
-          // INVALID / ERROR: Còi gắt dồn dập
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
+          // Âm thanh trầm cảnh báo
           osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(150, now);
-          gain.gain.setValueAtTime(0.5, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
+          osc.frequency.setValueAtTime(220, now); // A3
+          osc.frequency.setValueAtTime(146.83, now + 0.15); // D3
+          gain.gain.setValueAtTime(0.35, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
           osc.start(now);
           osc.stop(now + 0.4);
         }
+      } catch (e) {}
+    }
+
+    // Hiển thị thông báo Toast
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.className = isError ? 'error' : 'success';
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 3000);
+    }
+
+    // Định dạng thời gian thân thiện
+    function formatTime(isoStr) {
+      if (!isoStr) return '';
+      try {
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return isoStr;
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
       } catch (e) {
-        console.warn('Audio error:', e);
+        return isoStr;
       }
     }
 
-    // 3. Rung (Haptics)
-    function triggerVibrate(type) {
-      if (!navigator.vibrate) return;
-      if (type === 'OK') {
-        navigator.vibrate([100, 50, 100]);
-      } else if (type === 'DUPLICATE') {
-        navigator.vibrate([300, 100, 300, 100, 300]);
-      } else {
-        navigator.vibrate([500, 100, 500]);
-      }
-    }
+    // ==========================================
+    // 1. TẢI VÀ LÀM MỚI DỮ LIỆU (Diagram 2 & 3)
+    // ==========================================
 
-    // 4. Wake Lock (Giữ màn hình luôn sáng)
-    let wakeLock = null;
-    async function requestWakeLock() {
-      if ('wakeLock' in navigator) {
-        try {
-          wakeLock = await navigator.wakeLock.request('screen');
-        } catch (err) {}
-      }
-    }
-    requestWakeLock();
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') requestWakeLock();
-    });
-
-    // 5. Kiểm tra kết nối Server định kỳ & Cập nhật thống kê
-    const offlineBanner = document.getElementById('offline-banner');
-    const statsCheckedEl = document.getElementById('stats-checked');
-    const statsTotalEl = document.getElementById('stats-total');
-    let isServerOnline = true;
-
-    async function fetchStats() {
+    async function loadStats() {
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
-        const res = await fetch('/api/stats', { signal: controller.signal });
-        clearTimeout(timeoutId);
+        const res = await fetch('/api/stats');
+        if (!res.ok) throw new Error('Không thể tải thống kê');
+        const data = await res.json();
 
-        if (res.ok) {
-          const data = await res.json();
-          statsCheckedEl.innerText = data.checked || 0;
-          statsTotalEl.innerText = data.total || 0;
-          if (!isServerOnline) {
-            isServerOnline = true;
-            offlineBanner.style.display = 'none';
-          }
-        } else {
-          markOffline();
-        }
+        document.getElementById('stat-all').innerText = String(data.all || 0).padStart(2, '0');
+        document.getElementById('stat-checked').innerText = String(data.checked || 0).padStart(2, '0');
+        document.getElementById('stat-unchecked').innerText = String(data.unchecked || 0).padStart(2, '0');
+        document.getElementById('offline-alert').style.display = 'none';
       } catch (err) {
-        markOffline();
+        document.getElementById('offline-alert').style.display = 'block';
       }
     }
 
-    function markOffline() {
-      isServerOnline = false;
-      offlineBanner.style.display = 'block';
-    }
-
-    setInterval(fetchStats, 3000);
-    fetchStats();
-
-    // 6. Hiển thị Kết Quả Lớn Phủ Màn Hình
-    const overlay = document.getElementById('result-overlay');
-    const resIcon = document.getElementById('res-icon');
-    const resTitle = document.getElementById('res-title');
-    const resName = document.getElementById('res-name');
-    const resDetail = document.getElementById('res-detail');
-    const resSub = document.getElementById('res-sub');
-    let overlayTimeout = null;
-
-    function showResult(data) {
-      if (overlayTimeout) clearTimeout(overlayTimeout);
-
-      overlay.className = '';
-
-      if (data.status === 'OK') {
-        overlay.classList.add('status-ok');
-        resIcon.innerText = '✔';
-        resTitle.innerText = 'CHO VÀO';
-        resName.innerText = data.name || 'Khách Hàng';
-        resDetail.innerText = `${data.label || ''} • ${data.type || ''}`;
-        resSub.innerText = `Mã: ${data.code} • Đơn: ${data.orderId || ''}`;
-        playBeep('OK');
-        triggerVibrate('OK');
-      } else if (data.status === 'DUPLICATE') {
-        overlay.classList.add('status-duplicate');
-        resIcon.innerText = '⚠';
-        resTitle.innerText = 'ĐÃ SỬ DỤNG';
-        resName.innerText = data.name || 'Khách Hàng';
-
-        let timeStr = '';
-        if (data.at) {
-          try {
-            const d = new Date(data.at);
-            timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-          } catch(e) {}
-        }
-        resDetail.innerText = `Đã vào lúc: ${timeStr} (${data.gate || 'Không rõ'})`;
-        resSub.innerText = `Mã: ${data.code} • CẢNH BÁO TRÙNG VÉ!`;
-        playBeep('DUPLICATE');
-        triggerVibrate('DUPLICATE');
-      } else if (data.status === 'NOT_VALID_STATUS') {
-        overlay.classList.add('status-invalid');
-        resIcon.innerText = '✖';
-        resTitle.innerText = 'VÉ BỊ HỦY';
-        resName.innerText = data.name || 'Khách Hàng';
-        resDetail.innerText = `Trạng thái vé: ${data.ticketStatus || 'CANCELLED'}`;
-        resSub.innerText = `Mã: ${data.code} • KHÔNG ĐƯỢC VÀO!`;
-        playBeep('ERROR');
-        triggerVibrate('ERROR');
-      } else {
-        // INVALID hoặc khác
-        overlay.classList.add('status-invalid');
-        resIcon.innerText = '✖';
-        resTitle.innerText = 'VÉ KHÔNG HỢP LỆ';
-        resName.innerText = 'MÃ KHÔNG TỒN TẠI';
-        resDetail.innerText = data.message || 'Mã vé không có trong hệ thống';
-        resSub.innerText = `Mã: ${data.code || ''}`;
-        playBeep('ERROR');
-        triggerVibrate('ERROR');
-      }
-
-      overlay.style.display = 'flex';
-
-      // Tự động tắt sau 3.5 giây
-      overlayTimeout = setTimeout(() => {
-        closeResult();
-      }, 3500);
-    }
-
-    function closeResult() {
-      if (overlayTimeout) clearTimeout(overlayTimeout);
-      overlay.style.display = 'none';
-    }
-
-    overlay.addEventListener('click', closeResult);
-
-    // 7. Logic Quét QR & Gửi API Scan
-    let lastCode = '';
-    let lastTime = 0;
-    let isProcessing = false;
-
-    async function onScanSuccess(decodedText) {
-      if (isProcessing) return;
-
-      const code = (decodedText || '').trim().toUpperCase();
-      if (!code) return;
-
-      // Chặn quét lặp cùng 1 mã trong 3 giây ở client
-      const now = Date.now();
-      if (code === lastCode && (now - lastTime < 3000)) {
-        return;
-      }
-      lastCode = code;
-      lastTime = now;
-
-      // Không tự cho vào nếu mất mạng
-      if (!isServerOnline) {
-        showResult({
-          status: 'INVALID',
-          code,
-          message: 'Mất kết nối tới máy chủ! Vui lòng kiểm tra Wi-Fi.'
+    async function loadTickets() {
+      try {
+        const params = new URLSearchParams({
+          status: currentFilter,
+          search: currentSearch,
+          page: currentPage,
+          limit: pageLimit
         });
-        return;
+
+        const res = await fetch(`/api/tickets?${params.toString()}`);
+        if (!res.ok) throw new Error('Không thể tải danh sách vé');
+        const data = await res.json();
+
+        renderTable(data.tickets, data.total, data.page, data.totalPages);
+        document.getElementById('offline-alert').style.display = 'none';
+      } catch (err) {
+        document.getElementById('offline-alert').style.display = 'block';
+      }
+    }
+
+    function refreshDashboard() {
+      loadStats();
+      loadTickets();
+      showToast('Đã làm mới dữ liệu');
+    }
+
+    // Đổi bộ lọc theo thẻ Dashboard (Diagram 3: Lọc danh sách theo Dashboard)
+    function setFilter(filter) {
+      currentFilter = filter;
+      currentPage = 1;
+
+      // Cập nhật giao diện thẻ được chọn
+      document.getElementById('card-all').classList.toggle('active', filter === 'all');
+      document.getElementById('card-checked').classList.toggle('active', filter === 'checked');
+      document.getElementById('card-unchecked').classList.toggle('active', filter === 'unchecked');
+
+      loadTickets();
+    }
+
+    // Render bảng danh sách vé (Diagram 0)
+    function renderTable(tickets, total, page, totalPages) {
+      const tbody = document.getElementById('tickets-table-body');
+      tbody.innerHTML = '';
+
+      if (!tickets || tickets.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="9" style="text-align: center; padding: 36px; color: var(--text-muted);">
+              ${currentSearch ? 'Không tìm thấy vé nào khớp với "' + escapeHtml(currentSearch) + '"' : 'Chưa có dữ liệu vé'}
+            </td>
+          </tr>
+        `;
+      } else {
+        tickets.forEach(t => {
+          const tr = document.createElement('tr');
+          const isChecked = t.checkedIn === 1;
+
+          // Note tag
+          let noteHtml = '-';
+          if (t.note) {
+            const isVoucher = t.note.toLowerCase().includes('voucher');
+            noteHtml = `<span class="note-tag ${isVoucher ? 'note-voucher' : ''}">${escapeHtml(t.note)}</span>`;
+          }
+
+          tr.innerHTML = `
+            <td style="color: var(--text-muted); font-weight: 600;">${t.stt}</td>
+            <td style="font-weight: 600;">${escapeHtml(t.name || 'Khách hàng')}</td>
+            <td style="color: var(--text-muted);">${escapeHtml(t.email || '-')}</td>
+            <td>${formatTime(t.issuedAt) || '-'}</td>
+            <td>
+              <span class="ticket-code-link" onclick="viewTicketDetail('${escapeHtml(t.code)}')">${escapeHtml(t.code)}</span>
+            </td>
+            <td>${escapeHtml(t.label || 'Vé 1/1')}</td>
+            <td>
+              <span class="badge-status ${isChecked ? 'badge-checked' : 'badge-unchecked'}" 
+                    onclick="toggleTicketStatus('${escapeHtml(t.code)}', ${isChecked})"
+                    title="Ấn để thay đổi trạng thái thủ công">
+                ${isChecked ? '✔ Đã soát' : '⏳ Chưa soát'}
+              </span>
+            </td>
+            <td style="color: ${isChecked ? 'var(--text)' : 'var(--text-muted)'}; font-family: monospace;">
+              ${isChecked ? formatTime(t.checkedAt) : '-'}
+            </td>
+            <td>${noteHtml}</td>
+          `;
+          tbody.appendChild(tr);
+        });
       }
 
-      isProcessing = true;
-      const currentGate = gateInput.value.trim() || 'Cổng 1';
+      // Render thanh phân trang
+      renderPagination(total, page, totalPages);
+    }
+
+    function renderPagination(total, page, totalPages) {
+      const info = document.getElementById('page-info');
+      info.innerText = `Tổng cộng ${total} vé • Trang ${page}/${totalPages}`;
+
+      const controls = document.getElementById('page-controls');
+      controls.innerHTML = '';
+
+      // Nút <
+      const prevBtn = document.createElement('button');
+      prevBtn.className = 'page-btn';
+      prevBtn.innerHTML = '&lt;';
+      prevBtn.disabled = page <= 1;
+      prevBtn.onclick = () => { if (page > 1) { currentPage--; loadTickets(); } };
+      controls.appendChild(prevBtn);
+
+      // Các số trang
+      let startPage = Math.max(1, page - 2);
+      let endPage = Math.min(totalPages, page + 2);
+      if (endPage - startPage < 4) {
+        if (startPage === 1) endPage = Math.min(totalPages, 5);
+        else if (endPage === totalPages) startPage = Math.max(1, totalPages - 4);
+      }
+
+      for (let p = startPage; p <= endPage; p++) {
+        const btn = document.createElement('button');
+        btn.className = `page-btn ${p === page ? 'active' : ''}`;
+        btn.innerText = p;
+        btn.onclick = () => { currentPage = p; loadTickets(); };
+        controls.appendChild(btn);
+      }
+
+      // Nút >
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'page-btn';
+      nextBtn.innerHTML = '&gt;';
+      nextBtn.disabled = page >= totalPages;
+      nextBtn.onclick = () => { if (page < totalPages) { currentPage++; loadTickets(); } };
+      controls.appendChild(nextBtn);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // ==========================================
+    // 2. TÌM KIẾM MÃ VÉ (Diagram 0: Enter -> Báo lỗi hoặc hiển thị vé)
+    // ==========================================
+
+    async function handleSearchKey(event) {
+      if (event.key === 'Enter') {
+        const val = event.target.value.trim();
+        currentSearch = val;
+        currentPage = 1;
+        document.getElementById('search-clear-btn').style.display = val ? 'block' : 'none';
+
+        if (val) {
+          // Kiểm tra xem vé có tồn tại không để Báo lỗi theo sơ đồ
+          try {
+            const res = await fetch(`/api/tickets?search=${encodeURIComponent(val)}&limit=1`);
+            const data = await res.json();
+            if (data.total === 0) {
+              alert('Báo lỗi: Không tìm thấy vé trong hệ thống!');
+            }
+          } catch (e) {}
+        }
+
+        loadTickets();
+      }
+    }
+
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('search-clear-btn').style.display = 'none';
+      currentSearch = '';
+      currentPage = 1;
+      loadTickets();
+    }
+
+    // ==========================================
+    // 3. THAY ĐỔI TRẠNG THÁI THỦ CÔNG (Diagram 0)
+    // ==========================================
+
+    async function toggleTicketStatus(code, isCurrentlyChecked) {
+      const actionText = isCurrentlyChecked ? 'hoàn tác vé này về "Chưa soát"' : 'chuyển vé này sang "Đã soát"';
+      if (!confirm(`Bạn có chắc muốn ${actionText} cho mã: ${code}?`)) {
+        return;
+      }
 
       try {
-        const res = await fetch('/api/scan', {
+        const res = await fetch('/api/manual-checkin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, gate: currentGate })
+          body: JSON.stringify({ code, toggle: isCurrentlyChecked })
         });
         const data = await res.json();
-        showResult(data);
-        fetchStats(); // Cập nhật lại số vé đã vào
-      } catch (err) {
-        markOffline();
-        showResult({
-          status: 'INVALID',
-          code,
-          message: 'Lỗi gửi yêu cầu tới server!'
-        });
-      } finally {
-        setTimeout(() => {
-          isProcessing = false;
-        }, 1200);
-      }
-    }
 
-    // 8. Khởi tạo Camera bằng Html5Qrcode
-    let html5QrCode = null;
-    let currentCameraIndex = 0;
-    let availableCameras = [];
-    let isTorchOn = false;
-
-    async function initCamera() {
-      html5QrCode = new Html5Qrcode("reader");
-
-      try {
-        const devices = await Html5Qrcode.getCameras();
-        if (devices && devices.length) {
-          availableCameras = devices;
-          // Ưu tiên camera sau
-          const backCamIndex = devices.findIndex(c =>
-            c.label.toLowerCase().includes('back') ||
-            c.label.toLowerCase().includes('rear') ||
-            c.label.toLowerCase().includes('environment')
-          );
-          currentCameraIndex = backCamIndex !== -1 ? backCamIndex : 0;
-          startCamera(availableCameras[currentCameraIndex].id);
+        if (data.status === 'OK') {
+          showToast(data.message || 'Cập nhật trạng thái thành công');
+          loadStats();
+          loadTickets();
         } else {
-          startCamera({ facingMode: "environment" });
+          alert('Lỗi: ' + (data.message || 'Không thể đổi trạng thái'));
         }
       } catch (err) {
-        console.warn('Lỗi lấy danh sách camera, fallback facingMode:', err);
-        startCamera({ facingMode: "environment" });
+        alert('Lỗi kết nối máy chủ');
       }
     }
 
-    function startCamera(cameraIdOrConfig) {
+    // ==========================================
+    // 4. CHI TIẾT MÃ VÉ (Diagram 0: Ấn vào mã vé -> Đóng bảng)
+    // ==========================================
+
+    async function viewTicketDetail(code) {
+      try {
+        const res = await fetch(`/api/tickets/${encodeURIComponent(code)}`);
+        if (!res.ok) throw new Error('Không tìm thấy vé');
+        const t = await res.json();
+
+        document.getElementById('m-code').innerText = t.code;
+        document.getElementById('m-name').innerText = t.name || '-';
+        document.getElementById('m-email').innerText = t.email || '-';
+        document.getElementById('m-phone').innerText = t.phone || '-';
+        document.getElementById('m-issued').innerText = formatTime(t.issuedAt) || '-';
+        document.getElementById('m-order').innerText = t.orderId || '-';
+        document.getElementById('m-payment').innerText = t.paymentInfo || 'PAYOS_AUTO';
+        document.getElementById('m-label-type').innerText = `${t.label || 'Vé 1/1'} • ${t.type || 'Vé Sự Kiện'}`;
+        
+        const isChecked = t.checkedIn === 1;
+        document.getElementById('m-status').innerHTML = isChecked 
+          ? '<span style="color: #34d399; font-weight: 700;">✔ Đã soát</span>' 
+          : '<span style="color: #fbbf24; font-weight: 700;">⏳ Chưa soát</span>';
+        
+        document.getElementById('m-checked-at').innerText = isChecked ? formatTime(t.checkedAt) : 'Chưa check-in';
+        document.getElementById('m-note').innerText = t.note || 'Không có';
+
+        document.getElementById('ticket-modal').style.display = 'flex';
+      } catch (err) {
+        alert('Không thể xem chi tiết vé: ' + err.message);
+      }
+    }
+
+    function closeTicketModal() {
+      document.getElementById('ticket-modal').style.display = 'none';
+    }
+
+    // ==========================================
+    // 5. NHẬP DANH SÁCH (Diagram 0: File lỗi / Nhập thành công)
+    // ==========================================
+
+    function openImportModal() {
+      selectedFileContent = null;
+      selectedFileName = '';
+      document.getElementById('file-selected-name').innerText = '';
+      document.getElementById('btn-confirm-import').disabled = true;
+      document.getElementById('file-input').value = '';
+      document.getElementById('import-modal').style.display = 'flex';
+    }
+
+    function closeImportModal() {
+      document.getElementById('import-modal').style.display = 'none';
+    }
+
+    async function handleFileSelected(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      selectedFileName = file.name;
+      document.getElementById('file-selected-name').innerText = `Đã chọn: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      
+      try {
+        selectedFileContent = await file.text();
+        document.getElementById('btn-confirm-import').disabled = false;
+      } catch (e) {
+        alert('File lỗi: Không thể đọc file');
+      }
+    }
+
+    async function confirmImport() {
+      if (!selectedFileContent) return;
+
+      const btn = document.getElementById('btn-confirm-import');
+      btn.disabled = true;
+      btn.innerText = 'Đang xử lý...';
+
+      try {
+        const res = await fetch('/api/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: selectedFileName,
+            content: selectedFileContent
+          })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          alert('Nhập thành công');
+          closeImportModal();
+          loadStats();
+          loadTickets();
+        } else {
+          alert('File lỗi');
+        }
+      } catch (err) {
+        alert('File lỗi: Không thể gửi dữ liệu lên máy chủ');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Xác nhận';
+      }
+    }
+
+    // ==========================================
+    // 6. SOÁT VÉ - QUÉT MÃ QR (Diagram 1)
+    // ==========================================
+
+    async function openScanner() {
+      getAudioContext(); // Kích hoạt WebAudio
+      document.getElementById('scanner-overlay').style.display = 'flex';
+      document.getElementById('scan-result-card').style.display = 'none';
+      isScanPaused = false;
+
+      // Giữ màn hình luôn sáng nếu hỗ trợ
+      if ('wakeLock' in navigator) {
+        try { await navigator.wakeLock.request('screen'); } catch (e) {}
+      }
+
+      startCamera();
+    }
+
+    function startCamera() {
+      if (isCameraScanning) return;
+
+      html5QrCode = new Html5Qrcode("camera-reader");
       const config = {
         fps: 15,
         qrbox: { width: 250, height: 250 },
@@ -829,135 +1328,130 @@
       };
 
       html5QrCode.start(
-        cameraIdOrConfig,
+        { facingMode: "environment" },
         config,
-        onScanSuccess,
+        onQrCodeScanned,
         (errorMessage) => {
-          // Bỏ qua log frame quét thất bại
+          // Bỏ qua lỗi nhận diện khung hình trống
         }
-      ).catch(err => {
-        console.error("Không thể mở Camera:", err);
+      ).then(() => {
+        isCameraScanning = true;
+      }).catch((err) => {
+        alert('Lỗi truy cập Camera: Vui lòng cấp quyền Camera trên trình duyệt');
+        closeScanner();
       });
     }
 
-    // Nút đổi Camera
-    document.getElementById('flip-camera-btn').addEventListener('click', async () => {
-      if (availableCameras.length <= 1) return;
-      currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
-      try {
-        await html5QrCode.stop();
-        startCamera(availableCameras[currentCameraIndex].id);
-      } catch (e) {
-        console.error(e);
-      }
-    });
+    // Xử lý khi quét thấy mã QR (Diagram 1)
+    async function onQrCodeScanned(decodedText) {
+      if (isScanPaused) return;
 
-    // Nút Bật / Tắt Flash
-    document.getElementById('torch-btn').addEventListener('click', async () => {
+      // "Tạm dừng Camera 1.5 giây (chống quét đúp)"
+      isScanPaused = true;
+      setTimeout(() => {
+        // Sau 1.5s nếu người dùng chưa bấm Xác nhận thì tiếp tục cho phép quét nếu popup chưa mở
+      }, 1500);
+
+      // Gửi mã về Máy chủ
       try {
-        isTorchOn = !isTorchOn;
-        await html5QrCode.applyVideoConstraints({
-          advanced: [{ torch: isTorchOn }]
+        const res = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: decodedText, gate: 'Cổng chính' })
         });
-        document.getElementById('torch-btn').style.background = isTorchOn ? '#38bdf8' : 'rgba(15, 23, 42, 0.75)';
-        document.getElementById('torch-btn').style.color = isTorchOn ? '#0f172a' : '#fff';
-      } catch (err) {
-        alert('Thiết bị không hỗ trợ bật đèn Flash từ trình duyệt');
-      }
-    });
+        const data = await res.json();
 
-    // 9. Tra cứu thủ công Modal
-    const searchModal = document.getElementById('search-modal');
-    const openSearchBtn = document.getElementById('open-search-btn');
-    const closeSearchBtn = document.getElementById('close-search-btn');
-    const searchQueryInput = document.getElementById('search-query-input');
-    const searchActionBtn = document.getElementById('search-action-btn');
-    const searchResultsList = document.getElementById('search-results-list');
+        const card = document.getElementById('scan-result-card');
+        const title = document.getElementById('scan-res-title');
+        const noteBadge = document.getElementById('scan-res-note');
+        const info = document.getElementById('scan-res-info');
 
-    openSearchBtn.addEventListener('click', () => {
-      searchModal.style.display = 'flex';
-      searchQueryInput.focus();
-    });
+        if (data.status === 'OK') {
+          // "Thành công!" và Ghi chú nếu có
+          playBeep('success');
+          if (navigator.vibrate) navigator.vibrate([150]);
 
-    closeSearchBtn.addEventListener('click', () => {
-      searchModal.style.display = 'none';
-      searchResultsList.innerHTML = '';
-      searchQueryInput.value = '';
-    });
+          card.className = 'success';
+          title.innerText = 'Thành công!';
+          info.innerText = `${data.name || ''} • ${data.label || ''} • Mã: ${data.code}`;
 
-    async function executeSearch() {
-      const q = searchQueryInput.value.trim();
-      if (!q) return;
-
-      searchResultsList.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;">Đang tìm kiếm...</div>';
-
-      try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-        const list = await res.json();
-
-        if (!list || list.length === 0) {
-          searchResultsList.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;">Không tìm thấy vé nào phù hợp</div>';
-          return;
-        }
-
-        searchResultsList.innerHTML = '';
-        for (const t of list) {
-          const card = document.createElement('div');
-          card.className = 'ticket-card';
-
-          const isChecked = t.checked_in === 1;
-          const isCancelled = t.status !== 'VALID';
-
-          let actionHtml = '';
-          if (isChecked) {
-            actionHtml = `<span class="badge-in">Đã vào (${t.gate || ''})</span>`;
-          } else if (isCancelled) {
-            actionHtml = `<span class="badge-cancelled">${t.status}</span>`;
+          if (data.note) {
+            noteBadge.innerText = `Ghi chú: ${data.note}`;
+            noteBadge.style.display = 'inline-block';
           } else {
-            actionHtml = `<button class="checkin-action-btn" onclick="manualCheckin('${t.code}')">CHO VÀO</button>`;
+            noteBadge.style.display = 'none';
           }
+        } else {
+          // "Không hợp lệ"
+          playBeep('error');
+          if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
 
-          card.innerHTML = `
-            <div class="ticket-info">
-              <div class="t-name">${t.name || 'Không có tên'}</div>
-              <div class="t-code">${t.code}</div>
-              <div class="t-meta">${t.label || ''} • SĐT: ${t.phone || 'N/A'} • Đơn: ${t.order_id || ''}</div>
-            </div>
-            <div>${actionHtml}</div>
-          `;
-          searchResultsList.appendChild(card);
+          card.className = 'invalid';
+          title.innerText = 'Không hợp lệ';
+          noteBadge.style.display = 'none';
+          info.innerText = data.message || 'Mã vé không tồn tại hoặc đã được sử dụng';
         }
-      } catch (e) {
-        searchResultsList.innerHTML = '<div style="text-align:center;padding:20px;color:#dc2626;">Lỗi kết nối tra cứu!</div>';
+
+        // Hiển thị kết quả kèm popup "Quét mã tiếp theo?"
+        card.style.display = 'flex';
+
+      } catch (err) {
+        playBeep('error');
+        const card = document.getElementById('scan-result-card');
+        card.className = 'invalid';
+        document.getElementById('scan-res-title').innerText = 'Không hợp lệ';
+        document.getElementById('scan-res-note').style.display = 'none';
+        document.getElementById('scan-res-info').innerText = 'Lỗi kết nối máy chủ';
+        card.style.display = 'flex';
       }
     }
 
-    searchActionBtn.addEventListener('click', executeSearch);
-    searchQueryInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') executeSearch();
+    // Nút "Xác nhận" trong popup "Quét mã tiếp theo?" (Diagram 1)
+    function confirmNextScan() {
+      document.getElementById('scan-result-card').style.display = 'none';
+      isScanPaused = false;
+    }
+
+    // Nút "Thoát" trong popup (Diagram 1: Thoát khỏi giao diện soát vé, quay về trang danh sách mã vé)
+    function closeScanner() {
+      if (html5QrCode && isCameraScanning) {
+        html5QrCode.stop().then(() => {
+          isCameraScanning = false;
+          html5QrCode.clear();
+        }).catch(() => {
+          isCameraScanning = false;
+        });
+      }
+      document.getElementById('scanner-overlay').style.display = 'none';
+      document.getElementById('scan-result-card').style.display = 'none';
+      isScanPaused = false;
+
+      // Cập nhật lại số liệu và bảng
+      loadStats();
+      loadTickets();
+    }
+
+    // Khởi chạy khi tải trang
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStats();
+      loadTickets();
+
+      // Định kỳ 5 giây cập nhật thống kê nhẹ
+      setInterval(() => {
+        if (!isCameraScanning) {
+          loadStats();
+        }
+      }, 5000);
     });
 
-    window.manualCheckin = async function(code) {
-      if (!confirm(`Xác nhận cho vé ${code} vào?`)) return;
-      const currentGate = gateInput.value.trim() || 'Cổng 1';
-
-      try {
-        const res = await fetch('/api/manual-checkin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, gate: currentGate })
-        });
-        const data = await res.json();
-        searchModal.style.display = 'none';
-        showResult(data);
-        fetchStats();
-      } catch (err) {
-        alert('Lỗi khi thực hiện check-in tay!');
-      }
-    };
-
-    // Khởi động Camera khi DOM sẵn sàng
-    window.addEventListener('DOMContentLoaded', initCamera);
+    // Xử lý sự kiện offline/online
+    window.addEventListener('offline', () => {
+      document.getElementById('offline-alert').style.display = 'block';
+    });
+    window.addEventListener('online', () => {
+      document.getElementById('offline-alert').style.display = 'none';
+      loadStats();
+    });
   </script>
 </body>
 </html>
