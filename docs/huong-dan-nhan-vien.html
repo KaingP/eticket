@@ -8,36 +8,39 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       margin: 0;
       padding: 24px;
-      background: #f8fafc;
-      color: #0f172a;
+      background: #FCF1F2;
+      color: #2D1618;
     }
     .sheet {
       max-width: 800px;
       margin: 0 auto;
-      background: #fff;
-      border: 3px solid #0284c7;
+      background: #FFFFFF;
+      border: 2px solid #AF1C2B;
       border-radius: 16px;
-      padding: 32px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(175, 28, 43, 0.1);
     }
     .header {
+      background: #AF1C2B;
+      color: #FFFFFF;
       text-align: center;
-      border-bottom: 2px dashed #cbd5e1;
-      padding-bottom: 20px;
-      margin-bottom: 24px;
+      padding: 22px 24px;
     }
     h1 {
       font-size: 26px;
-      color: #0369a1;
+      color: #FFFFFF;
       margin: 0 0 6px 0;
       text-transform: uppercase;
       letter-spacing: 1px;
     }
     .subtitle {
-      font-size: 16px;
-      font-weight: 700;
-      color: #475569;
+      font-size: 15px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.92);
       margin: 0;
+    }
+    .sheet-body {
+      padding: 28px 32px;
     }
     .grid {
       display: grid;
@@ -47,8 +50,8 @@
     }
     .qr-side {
       text-align: center;
-      background: #f0f9ff;
-      border: 2px solid #bae6fd;
+      background: #FCF5F6;
+      border: 2px solid #F3D1D5;
       border-radius: 12px;
       padding: 20px;
     }
@@ -62,11 +65,11 @@
       font-family: monospace;
       font-size: 15px;
       font-weight: bold;
-      color: #0284c7;
-      background: #fff;
+      color: #AF1C2B;
+      background: #FFFFFF;
       padding: 6px 12px;
-      border-radius: 6px;
-      border: 1px solid #7dd3fc;
+      border-radius: 8px;
+      border: 1px solid #E2C4C7;
     }
     .steps-side {
       display: flex;
@@ -74,25 +77,25 @@
       gap: 16px;
     }
     .step-card {
-      background: #f8fafc;
-      border-left: 5px solid #0284c7;
+      background: #FCF5F6;
+      border-left: 5px solid #AF1C2B;
       padding: 12px 16px;
-      border-radius: 0 8px 8px 0;
+      border-radius: 0 10px 10px 0;
     }
     .step-title {
       font-size: 15px;
       font-weight: bold;
-      color: #0f172a;
+      color: #AF1C2B;
       margin-bottom: 4px;
     }
     .step-desc {
       font-size: 13px;
-      color: #475569;
+      color: #4A2327;
       line-height: 1.4;
     }
     .status-guide {
       margin-top: 24px;
-      border-top: 2px dashed #cbd5e1;
+      border-top: 2px dashed #E2C4C7;
       padding-top: 20px;
     }
     .status-grid {
@@ -104,14 +107,14 @@
     }
     .badge-card {
       padding: 12px 8px;
-      border-radius: 8px;
+      border-radius: 10px;
       color: #fff;
       font-weight: bold;
       font-size: 13px;
     }
     .bg-green { background: #059669; }
     .bg-orange { background: #d97706; }
-    .bg-red { background: #dc2626; }
+    .bg-red { background: #AF1C2B; }
     .badge-sub {
       font-size: 11px;
       font-weight: normal;
@@ -121,6 +124,7 @@
     @media print {
       body { background: #fff; padding: 0; }
       .sheet { box-shadow: none; border-width: 2px; }
+      .header { background: #AF1C2B !important; -webkit-print-color-adjust: exact; }
     }
   </style>
 </head>
@@ -131,9 +135,10 @@
       <p class="subtitle">HƯỚNG DẪN KẾT NỐI & SOÁT VÉ DÀNH CHO NHÂN VIÊN</p>
     </div>
 
+    <div class="sheet-body">
     <div class="grid">
       <div class="qr-side">
-        <h3 style="margin-top:0; color:#0369a1;">QUÉT MÃ MỞ APP SOÁT VÉ</h3>
+        <h3 style="margin-top:0; color:#AF1C2B;">QUÉT MÃ MỞ APP SOÁT VÉ</h3>
         <img src="data:image/png;base64,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" alt="QR Soat Ve">
         <div class="url-text">https://192.168.168.9</div>
         <p style="font-size:12px; color:#64748b; margin-top:8px; margin-bottom:0;">
@@ -183,9 +188,10 @@
           <div class="badge-sub">Vé bị hủy / Giả mạo • Từ chối</div>
         </div>
       </div>
-      <div style="text-align:center; margin-top:14px; font-size:12px; color:#64748b;">
-        * Nếu điện thoại khách bị nứt vỡ không quét được QR: Bấm <strong>"🔍 Tra cứu thủ công"</strong> ở góc dưới màn hình và gõ Số Điện Thoại của khách.
+      <div style="text-align:center; margin-top:14px; font-size:12px; color:#785A5E;">
+        * Nếu điện thoại khách bị nứt vỡ không quét được QR: Tìm mã vé trên bảng hoặc gõ Tên / Mã vé vào ô tìm kiếm.
       </div>
+    </div>
     </div>
   </div>
 </body>

@@ -5,6 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Quản Trị Soát Vé - Hùng Vương Concert</title>
   <style>
+    :root {
+      --bg: #FCF1F2;
+      --header-bg: #AF1C2B;
+      --card-bg: #FFFFFF;
+      --card-border: #E2C4C7;
+      --table-td-border: #F4E4E6;
+      --table-col-border: #F7ECEE;
+      --primary: #AF1C2B;
+      --primary-hover: #8F1421;
+      --text: #2D1618;
+      --text-muted: #785A5E;
+    }
     * {
       box-sizing: border-box;
       margin: 0;
@@ -12,42 +24,98 @@
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0b0f19;
-      color: #f1f5f9;
-      padding: 20px;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
       line-height: 1.5;
+      position: relative;
+      overflow-x: hidden;
+    }
+    .corner-pixel {
+      position: fixed;
+      bottom: 16px;
+      width: 24px;
+      height: 24px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .corner-pixel-left { left: 16px; }
+    .corner-pixel-right { right: 16px; transform: scaleX(-1); }
+
+    /* Header GAME ON */
+    header {
+      background: var(--header-bg);
+      color: #FFFFFF;
+      padding: 16px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    header::before,
+    header::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0; width: 120px;
+      pointer-events: none;
+      background-image:
+        linear-gradient(45deg, rgba(120, 12, 24, 0.32) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(120, 12, 24, 0.32) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(120, 12, 24, 0.32) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(120, 12, 24, 0.32) 75%);
+      background-size: 24px 24px;
+      background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+      z-index: 0;
+    }
+    header::before {
+      left: 0;
+      -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.95), transparent);
+      mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.95), transparent);
+    }
+    header::after {
+      right: 0;
+      -webkit-mask-image: linear-gradient(to left, rgba(0, 0, 0, 0.95), transparent);
+      mask-image: linear-gradient(to left, rgba(0, 0, 0, 0.95), transparent);
+    }
+    .header-title {
+      position: relative;
+      z-index: 1;
+    }
+    .header-brand-sub {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.4px;
+      color: rgba(255, 255, 255, 0.92);
+      text-transform: uppercase;
+    }
+    .header-title h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: 0.4px;
+    }
+    .nav-actions {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
     }
     .container {
       max-width: 1200px;
       margin: 0 auto;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid #1e293b;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .header-title h1 {
-      font-size: 24px;
-      font-weight: 800;
-      color: #38bdf8;
-    }
-    .header-title p {
-      font-size: 13px;
-      color: #94a3b8;
-    }
-    .nav-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
+      padding: 0 24px 48px;
+      position: relative;
+      z-index: 1;
     }
     .btn {
       padding: 8px 14px;
-      border-radius: 6px;
+      border-radius: 10px;
       font-weight: 600;
       font-size: 13px;
       border: 1px solid transparent;
@@ -56,43 +124,51 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      min-height: 38px;
+      transition: all 0.15s;
     }
-    .btn-primary { background: #0284c7; color: #fff; }
-    .btn-primary:hover { background: #0369a1; }
-    .btn-success { background: #059669; color: #fff; }
+    .btn-primary { background: var(--primary); color: #FFFFFF; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-success { background: #059669; color: #FFFFFF; }
     .btn-success:hover { background: #047857; }
-    .btn-secondary { background: #1e293b; color: #cbd5e1; border-color: #334155; }
-    .btn-secondary:hover { background: #334155; }
-    .btn-danger { background: #dc2626; color: #fff; }
-    .btn-danger:hover { background: #b91c1c; }
+    .btn-secondary { background: #FFFFFF; color: #3D1A1E; border-color: #DFC2C5; }
+    .btn-secondary:hover { background: #FAF0F1; }
+    .btn-header-white { background: #FFFFFF; color: #3D1A1E; border-color: rgba(255,255,255,0.85); box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+    .btn-header-white:hover { background: #FFF6F7; }
+    .btn-danger { background: #DC2626; color: #FFFFFF; }
+    .btn-danger:hover { background: #B91C1C; }
 
     /* Thẻ Số Liệu Tổng Quan */
     .grid-stats {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
+      gap: 14px;
+      margin-bottom: 20px;
     }
     .stat-card {
-      background: #131c2e;
-      border: 1px solid #1e293b;
-      padding: 16px;
-      border-radius: 10px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(175, 28, 43, 0.04);
     }
     .stat-label {
-      font-size: 13px;
-      color: #94a3b8;
-      font-weight: 600;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
     }
     .stat-val {
       font-size: 28px;
       font-weight: 800;
-      color: #f8fafc;
+      color: var(--primary);
       margin: 4px 0;
+      font-variant-numeric: tabular-nums;
     }
     .stat-sub {
       font-size: 12px;
-      color: #64748b;
+      color: var(--text-muted);
     }
 
     /* Bảng Cổng & Log */
@@ -100,21 +176,24 @@
       display: grid;
       grid-template-columns: 1fr 2fr;
       gap: 16px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
     @media (max-width: 800px) {
       .grid-two { grid-template-columns: 1fr; }
+      header { padding: 14px 16px; }
+      .container { padding: 0 12px 36px; }
     }
     .card {
-      background: #131c2e;
-      border: 1px solid #1e293b;
+      background: var(--card-bg);
+      border: 1px solid #ECD4D7;
       padding: 18px;
-      border-radius: 10px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(175, 28, 43, 0.04);
     }
     .card-title {
       font-size: 16px;
       font-weight: 700;
-      color: #e2e8f0;
+      color: var(--text);
       margin-bottom: 12px;
       display: flex;
       justify-content: space-between;
@@ -130,76 +209,89 @@
     .gate-item {
       display: flex;
       justify-content: space-between;
-      padding: 8px 12px;
-      background: #0b0f19;
-      border-radius: 6px;
+      padding: 9px 12px;
+      background: #FCF5F6;
+      border: 1px solid #F3E1E3;
+      border-radius: 8px;
       font-size: 14px;
     }
-    .gate-name { font-weight: 600; color: #38bdf8; }
-    .gate-count { font-weight: 700; color: #10b981; }
+    .gate-name { font-weight: 600; color: var(--primary); }
+    .gate-count { font-weight: 700; color: #059669; }
 
     /* Tables */
     .table-container {
       overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid #ECD4D7;
     }
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 13px;
-      text-align: left;
+      text-align: center;
+      white-space: nowrap;
     }
     th {
-      background: #0f172a;
-      color: #94a3b8;
-      padding: 10px 12px;
+      background: var(--primary);
+      color: #FFFFFF;
+      padding: 10px 8px;
       font-weight: 600;
-      border-bottom: 1px solid #1e293b;
+      font-size: 12.5px;
+      border-bottom: 1px solid #961623;
+      border-right: 1px solid rgba(255, 255, 255, 0.14);
     }
+    th:last-child { border-right: none; }
     td {
-      padding: 10px 12px;
-      border-bottom: 1px solid #1e293b;
-      color: #cbd5e1;
+      padding: 10px 8px;
+      font-size: 12.5px;
+      border-bottom: 1px solid var(--table-td-border);
+      border-right: 1px solid var(--table-col-border);
+      color: var(--text);
     }
-    tr:hover {
-      background: #1e293b;
+    td:last-child { border-right: none; }
+    tr:hover td {
+      background: #FEF7F8;
     }
 
     /* Badges */
     .badge {
       display: inline-block;
-      padding: 3px 8px;
-      border-radius: 4px;
+      padding: 4px 10px;
+      border-radius: 999px;
       font-size: 11px;
       font-weight: 700;
     }
-    .badge-ok { background: #064e3b; color: #34d399; }
-    .badge-dup { background: #78350f; color: #fbbf24; }
-    .badge-err { background: #7f1d1d; color: #f87171; }
-    .badge-undo { background: #312e81; color: #a5b4fc; }
+    .badge-ok { background: #DCFCE7; color: #166534; }
+    .badge-dup { background: #FEF3C7; color: #92400E; }
+    .badge-err { background: #FEE2E2; color: #991B1B; }
+    .badge-undo { background: #E0E7FF; color: #3730A3; }
+    .badge-pending { background: #F7EAEB; color: #6B4D51; }
 
     /* Controls cho Bảng Vé */
     .tickets-controls {
       display: flex;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: 10px;
+      margin-bottom: 14px;
       flex-wrap: wrap;
     }
     .search-input {
       flex: 1;
-      min-width: 200px;
-      background: #0b0f19;
-      border: 1px solid #334155;
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 6px;
+      min-width: 220px;
+      background: #FFFFFF;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 9px 14px;
+      border-radius: 10px;
       font-size: 13px;
+      outline: none;
     }
+    .search-input:focus { border-color: var(--primary); }
     .filter-select {
-      background: #0b0f19;
-      border: 1px solid #334155;
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 6px;
+      background: #FFFFFF;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 10px;
       font-size: 13px;
     }
 
@@ -208,26 +300,39 @@
       display: none;
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(45, 22, 24, 0.55);
+      backdrop-filter: blur(4px);
       z-index: 9999;
       justify-content: center;
       align-items: center;
+      padding: 16px;
     }
     .modal-box {
-      background: #1e293b;
-      padding: 24px;
-      border-radius: 12px;
+      background: #FFFFFF;
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
       max-width: 360px;
-      width: 90%;
+      width: 100%;
+      overflow: hidden;
       text-align: center;
+      box-shadow: 0 20px 40px rgba(74, 24, 29, 0.25);
     }
-    .modal-box h3 {
-      margin-bottom: 8px;
-      color: #38bdf8;
+    .modal-head {
+      background: var(--header-bg);
+      color: #FFFFFF;
+      padding: 14px 20px;
     }
-    .modal-box p {
+    .modal-head h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .modal-body-pad {
+      padding: 20px 24px 24px;
+    }
+    .modal-body-pad p {
       font-size: 13px;
-      color: #94a3b8;
+      color: var(--text-muted);
       margin-bottom: 16px;
     }
     .pin-input {
@@ -236,43 +341,53 @@
       font-size: 18px;
       letter-spacing: 4px;
       text-align: center;
-      background: #0f172a;
-      border: 1px solid #475569;
-      color: #fff;
-      border-radius: 6px;
+      background: #FCF5F6;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      border-radius: 10px;
       margin-bottom: 16px;
     }
   </style>
 </head>
 <body>
 
+  <svg class="corner-pixel corner-pixel-left" viewBox="0 0 24 24" fill="#9E1C2A" aria-hidden="true">
+    <rect x="0" y="0" width="8" height="8" rx="1"/><rect x="0" y="12" width="12" height="12" rx="1"/><rect x="16" y="16" width="8" height="8" rx="1"/>
+  </svg>
+  <svg class="corner-pixel corner-pixel-right" viewBox="0 0 24 24" fill="#9E1C2A" aria-hidden="true">
+    <rect x="0" y="0" width="8" height="8" rx="1"/><rect x="0" y="12" width="12" height="12" rx="1"/><rect x="16" y="16" width="8" height="8" rx="1"/>
+  </svg>
+
   <!-- Modal Nhập PIN nếu chưa lưu -->
   <div id="pin-modal">
     <div class="modal-box">
-      <h3>Xác thực Quản Trị</h3>
-      <p>Vui lòng nhập mã PIN quản trị hệ thống</p>
-      <input type="password" id="admin-pin-field" class="pin-input" placeholder="••••••">
-      <div style="display:flex; gap:10px; justify-content:center;">
-        <button id="submit-pin-btn" class="btn btn-primary">Xác nhận</button>
+      <div class="modal-head"><h3>Xác thực Quản Trị</h3></div>
+      <div class="modal-body-pad">
+        <p>Vui lòng nhập mã PIN quản trị hệ thống</p>
+        <input type="password" id="admin-pin-field" class="pin-input" placeholder="••••••">
+        <div style="display:flex; gap:10px; justify-content:center;">
+          <button id="submit-pin-btn" class="btn btn-primary" style="width:100%; justify-content:center;">Xác nhận</button>
+        </div>
       </div>
     </div>
   </div>
 
+  <header>
+    <div class="header-title">
+      <div class="header-brand-sub">HÙNG VƯƠNG CONCERT • GAME ON</div>
+      <h1>QUẢN TRỊ HỆ THỐNG SOÁT VÉ</h1>
+    </div>
+    <div class="nav-actions">
+      <a href="/qr" target="_blank" class="btn btn-header-white">📱 QR Mời NV</a>
+      <a href="/" class="btn btn-header-white">🎫 Cổng Soát Vé</a>
+      <button id="refresh-btn" class="btn btn-header-white">🔄 Làm mới</button>
+      <button id="export-json-btn" class="btn btn-header-white">📥 JSON</button>
+      <button id="export-csv-btn" class="btn btn-header-white">📊 CSV</button>
+      <button id="export-db-btn" class="btn btn-header-white">💾 Backup DB</button>
+    </div>
+  </header>
+
   <div class="container">
-    <header>
-      <div class="header-title">
-        <h1>HỆ THỐNG SOÁT VÉ QUẢN TRỊ</h1>
-        <p>Hùng Vương Concert: GAME ON • Mạng Offline LAN</p>
-      </div>
-      <div class="nav-actions">
-        <a href="/qr" target="_blank" class="btn btn-primary" style="background:#0284c7;">📱 Mã QR Mời Nhân Viên</a>
-        <a href="/" class="btn btn-secondary">📱 Trang Quét Vé</a>
-        <button id="refresh-btn" class="btn btn-secondary">🔄 Làm mới</button>
-        <button id="export-json-btn" class="btn btn-primary">📥 Tải JSON</button>
-        <button id="export-csv-btn" class="btn btn-success">📊 Tải CSV</button>
-        <button id="export-db-btn" class="btn btn-secondary">💾 Tải DB Backup</button>
-      </div>
-    </header>
 
     <!-- Thẻ Thống Kê Tổng Quan -->
     <div class="grid-stats">
@@ -283,17 +398,17 @@
       </div>
       <div class="stat-card">
         <div class="stat-label">ĐÃ CHECK-IN</div>
-        <div id="stat-checked" class="stat-val" style="color: #34d399;">0</div>
+        <div id="stat-checked" class="stat-val" style="color: #059669;">0</div>
         <div id="stat-percent" class="stat-sub">0% số khách đã vào</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">CHƯA CHECK-IN</div>
-        <div id="stat-remaining" class="stat-val" style="color: #f59e0b;">0</div>
+        <div id="stat-remaining" class="stat-val" style="color: #D97706;">0</div>
         <div class="stat-sub">Đang chờ soát vé</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">TỔNG BẢN GHI VÉ</div>
-        <div id="stat-total-all" class="stat-val" style="color: #94a3b8;">0</div>
+        <div id="stat-total-all" class="stat-val" style="color: #785A5E;">0</div>
         <div class="stat-sub">Bao gồm cả vé hủy</div>
       </div>
     </div>
@@ -453,7 +568,7 @@
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td>${timeStr}</td>
-            <td style="font-family:monospace; color:#38bdf8;">${log.code}</td>
+            <td style="font-family:monospace; font-weight:700; color:#AF1C2B;">${log.code}</td>
             <td>${log.name || '---'}</td>
             <td>${log.gate || '---'}</td>
             <td><span class="badge ${badgeClass}">${log.result}</span></td>
@@ -509,17 +624,17 @@
 
           let checkinBadge = isChecked
             ? `<span class="badge badge-ok">ĐÃ VÀO</span>`
-            : `<span class="badge" style="background:#334155; color:#94a3b8;">CHƯA VÀO</span>`;
+            : `<span class="badge badge-pending">CHƯA VÀO</span>`;
 
           let timeStr = t.checked_at ? t.checked_at.replace('T', ' ').substring(0, 19) : '---';
 
           let actionBtn = '---';
           if (isChecked) {
-            actionBtn = `<button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="undoTicket('${t.code}')">Hoàn tác</button>`;
+            actionBtn = `<button class="btn btn-danger" style="padding:4px 8px; font-size:11px; min-height:28px;" onclick="undoTicket('${t.code}')">Hoàn tác</button>`;
           }
 
           tr.innerHTML = `
-            <td style="font-family:monospace; font-weight:700; color:#38bdf8;">${t.code}</td>
+            <td style="font-family:monospace; font-weight:700; color:#AF1C2B;">${t.code}</td>
             <td style="font-weight:600;">${t.name || ''}</td>
             <td>${t.phone || ''}</td>
             <td style="font-family:monospace;">${t.order_id || ''}</td>

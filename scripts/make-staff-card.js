@@ -58,36 +58,39 @@ async function generateStaffCard() {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       margin: 0;
       padding: 24px;
-      background: #f8fafc;
-      color: #0f172a;
+      background: #FCF1F2;
+      color: #2D1618;
     }
     .sheet {
       max-width: 800px;
       margin: 0 auto;
-      background: #fff;
-      border: 3px solid #0284c7;
+      background: #FFFFFF;
+      border: 2px solid #AF1C2B;
       border-radius: 16px;
-      padding: 32px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(175, 28, 43, 0.1);
     }
     .header {
+      background: #AF1C2B;
+      color: #FFFFFF;
       text-align: center;
-      border-bottom: 2px dashed #cbd5e1;
-      padding-bottom: 20px;
-      margin-bottom: 24px;
+      padding: 22px 24px;
     }
     h1 {
       font-size: 26px;
-      color: #0369a1;
+      color: #FFFFFF;
       margin: 0 0 6px 0;
       text-transform: uppercase;
       letter-spacing: 1px;
     }
     .subtitle {
-      font-size: 16px;
-      font-weight: 700;
-      color: #475569;
+      font-size: 15px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.92);
       margin: 0;
+    }
+    .sheet-body {
+      padding: 28px 32px;
     }
     .grid {
       display: grid;
@@ -97,8 +100,8 @@ async function generateStaffCard() {
     }
     .qr-side {
       text-align: center;
-      background: #f0f9ff;
-      border: 2px solid #bae6fd;
+      background: #FCF5F6;
+      border: 2px solid #F3D1D5;
       border-radius: 12px;
       padding: 20px;
     }
@@ -112,11 +115,11 @@ async function generateStaffCard() {
       font-family: monospace;
       font-size: 15px;
       font-weight: bold;
-      color: #0284c7;
-      background: #fff;
+      color: #AF1C2B;
+      background: #FFFFFF;
       padding: 6px 12px;
-      border-radius: 6px;
-      border: 1px solid #7dd3fc;
+      border-radius: 8px;
+      border: 1px solid #E2C4C7;
     }
     .steps-side {
       display: flex;
@@ -124,25 +127,25 @@ async function generateStaffCard() {
       gap: 16px;
     }
     .step-card {
-      background: #f8fafc;
-      border-left: 5px solid #0284c7;
+      background: #FCF5F6;
+      border-left: 5px solid #AF1C2B;
       padding: 12px 16px;
-      border-radius: 0 8px 8px 0;
+      border-radius: 0 10px 10px 0;
     }
     .step-title {
       font-size: 15px;
       font-weight: bold;
-      color: #0f172a;
+      color: #AF1C2B;
       margin-bottom: 4px;
     }
     .step-desc {
       font-size: 13px;
-      color: #475569;
+      color: #4A2327;
       line-height: 1.4;
     }
     .status-guide {
       margin-top: 24px;
-      border-top: 2px dashed #cbd5e1;
+      border-top: 2px dashed #E2C4C7;
       padding-top: 20px;
     }
     .status-grid {
@@ -154,14 +157,14 @@ async function generateStaffCard() {
     }
     .badge-card {
       padding: 12px 8px;
-      border-radius: 8px;
+      border-radius: 10px;
       color: #fff;
       font-weight: bold;
       font-size: 13px;
     }
     .bg-green { background: #059669; }
     .bg-orange { background: #d97706; }
-    .bg-red { background: #dc2626; }
+    .bg-red { background: #AF1C2B; }
     .badge-sub {
       font-size: 11px;
       font-weight: normal;
@@ -171,6 +174,7 @@ async function generateStaffCard() {
     @media print {
       body { background: #fff; padding: 0; }
       .sheet { box-shadow: none; border-width: 2px; }
+      .header { background: #AF1C2B !important; -webkit-print-color-adjust: exact; }
     }
   </style>
 </head>
@@ -181,9 +185,10 @@ async function generateStaffCard() {
       <p class="subtitle">HƯỚNG DẪN KẾT NỐI & SOÁT VÉ DÀNH CHO NHÂN VIÊN</p>
     </div>
 
+    <div class="sheet-body">
     <div class="grid">
       <div class="qr-side">
-        <h3 style="margin-top:0; color:#0369a1;">QUÉT MÃ MỞ APP SOÁT VÉ</h3>
+        <h3 style="margin-top:0; color:#AF1C2B;">QUÉT MÃ MỞ APP SOÁT VÉ</h3>
         <img src="${qrDataUrl}" alt="QR Soat Ve">
         <div class="url-text">${appUrl}</div>
         <p style="font-size:12px; color:#64748b; margin-top:8px; margin-bottom:0;">
@@ -233,9 +238,10 @@ async function generateStaffCard() {
           <div class="badge-sub">Vé bị hủy / Giả mạo • Từ chối</div>
         </div>
       </div>
-      <div style="text-align:center; margin-top:14px; font-size:12px; color:#64748b;">
-        * Nếu điện thoại khách bị nứt vỡ không quét được QR: Bấm <strong>"🔍 Tra cứu thủ công"</strong> ở góc dưới màn hình và gõ Số Điện Thoại của khách.
+      <div style="text-align:center; margin-top:14px; font-size:12px; color:#785A5E;">
+        * Nếu điện thoại khách bị nứt vỡ không quét được QR: Tìm mã vé trên bảng hoặc gõ Tên / Mã vé vào ô tìm kiếm.
       </div>
+    </div>
     </div>
   </div>
 </body>

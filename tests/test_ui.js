@@ -1,8 +1,8 @@
 /**
- * test_ui.js - Automated Responsive WebUI & Ergonomics Test Suite
+ * test_ui.js - Automated Responsive WebUI & Design Consistency Test Suite
  * Event: "Hùng Vương Concert: GAME ON" - Gate Check-in System
  *
- * Tier 1: Static Code, CSS & DOM Rule Verification (Zero-dependency, offline)
+ * Tier 1: Static Code, Palette Consistency, CSS & DOM Rule Verification
  * Tier 2: Real Headless Browser Runtime Verification via Chrome DevTools Protocol (CDP)
  */
 
@@ -15,6 +15,9 @@ const express = require('express');
 
 const PROJECT_DIR = fs.existsSync(path.join(__dirname, 'server.js')) ? path.resolve(__dirname) : path.resolve(__dirname, '..');
 const INDEX_HTML_PATH = path.join(PROJECT_DIR, 'public', 'index.html');
+const ADMIN_HTML_PATH = path.join(PROJECT_DIR, 'public', 'admin.html');
+const TEST_QR_HTML_PATH = path.join(PROJECT_DIR, 'public', 'test-qr.html');
+const STAFF_CARD_PATH = path.join(PROJECT_DIR, 'docs', 'huong-dan-nhan-vien.html');
 const SCREENSHOT_DIR = path.join(PROJECT_DIR, 'data', 'screenshots');
 
 let totalTests = 0;
@@ -31,7 +34,7 @@ function assert(condition, message) {
 }
 
 // =====================================================================
-// TIER 1: STATIC CODE, CSS & DOM RULE VERIFICATION
+// TIER 1: STATIC CODE, DESIGN PALETTE, CSS & DOM RULE VERIFICATION
 // =====================================================================
 
 console.log('\n===============================================================');
@@ -47,6 +50,9 @@ if (!fs.existsSync(INDEX_HTML_PATH)) {
 }
 
 const indexHtml = fs.readFileSync(INDEX_HTML_PATH, 'utf8');
+const adminHtml = fs.readFileSync(ADMIN_HTML_PATH, 'utf8');
+const testQrHtml = fs.readFileSync(TEST_QR_HTML_PATH, 'utf8');
+const staffCardHtml = fs.readFileSync(STAFF_CARD_PATH, 'utf8');
 
 // [TEST U1] Viewport Meta Tag & Mobile Compatibility
 console.log('\n[TEST U1] Kiểm tra Viewport Meta Tag & Cấu hình Mobile...');
@@ -57,10 +63,12 @@ assert(/initial-scale=1\.0/i.test(indexHtml),
 console.log('👉 Test U1: HOÀN THÀNH XUẤT SẮC');
 
 // [TEST U2] Offline Purity & DOM Invariants
-console.log('\n[TEST U2] Kiểm tra tính độc lập Offline (R2) & Bảo toàn 34 DOM ID...');
+console.log('\n[TEST U2] Kiểm tra tính độc lập Offline (R2) & Bảo toàn DOM ID...');
 const externalCdnPattern = /https?:\/\/(?!localhost|127\.0\.0\.1|192\.168\.1\.10)/i;
 assert(!externalCdnPattern.test(indexHtml),
   'Trang index.html KHÔNG chứa bất kỳ link CDN / internet / HTTP(S) bên ngoài nào');
+assert(!externalCdnPattern.test(adminHtml),
+  'Trang admin.html KHÔNG chứa bất kỳ link CDN / internet / HTTP(S) bên ngoài nào');
 assert(!indexHtml.includes('fonts.googleapis.com'),
   'index.html không gọi Google Fonts');
 assert(!indexHtml.includes('.mp3') && !indexHtml.includes('.wav'),
@@ -70,11 +78,10 @@ const qrLibPath = path.join(PROJECT_DIR, 'public', 'html5-qrcode.min.js');
 assert(fs.existsSync(qrLibPath) && fs.statSync(qrLibPath).size > 100000,
   'Thư viện html5-qrcode.min.js tồn tại cục bộ đầy đủ (>100KB)');
 
-// Kiểm tra toàn bộ 34 DOM IDs bắt buộc + #btn-theme-toggle
 const REQUIRED_DOM_IDS = [
   'card-all', 'card-checked', 'card-unchecked',
   'stat-all', 'stat-checked', 'stat-unchecked',
-  'search-input', 'search-clear-btn',
+  'btn-open-scanner', 'search-input', 'search-clear-btn',
   'tickets-table-body', 'page-info', 'page-controls',
   'ticket-modal', 'm-code', 'm-name', 'm-email', 'm-phone',
   'm-issued', 'm-order', 'm-payment', 'm-label-type',
@@ -82,8 +89,7 @@ const REQUIRED_DOM_IDS = [
   'import-modal', 'file-input', 'file-selected-name', 'btn-confirm-import',
   'scanner-overlay', 'camera-reader', 'btn-torch', 'btn-switch-cam',
   'scan-result-card', 'scan-res-title', 'scan-res-note', 'scan-res-info',
-  'scan-next-popup', 'offline-alert', 'toast',
-  'btn-theme-toggle'
+  'scan-next-popup', 'offline-alert', 'toast'
 ];
 
 REQUIRED_DOM_IDS.forEach(id => {
@@ -92,16 +98,18 @@ REQUIRED_DOM_IDS.forEach(id => {
 });
 console.log('👉 Test U2: HOÀN THÀNH XUẤT SẮC');
 
-// [TEST U3] CSS Theme Variables & Light/Dark Mode Architecture
-console.log('\n[TEST U3] Kiểm tra hệ thống CSS Variables Light/Dark Mode...');
-assert(indexHtml.includes(':root') && indexHtml.includes('--bg:') && indexHtml.includes('--card-bg:'),
-  ':root định nghĩa đầy đủ bảng màu mặc định Dark theme');
-assert(indexHtml.includes('[data-theme="light"]') || indexHtml.includes('[data-theme=\'light\']'),
-  'CSS chứa bộ định nghĩa [data-theme="light"] cho giao diện Light mode');
-assert(indexHtml.includes('toggleTheme') && indexHtml.includes('localStorage'),
-  'Có hàm toggleTheme() lưu trạng thái vào localStorage');
-assert(indexHtml.includes('hvc_theme') || indexHtml.includes("'theme'") || indexHtml.includes('"theme"'),
-  'Key lưu trữ theme vào localStorage hoạt động chuẩn');
+// [TEST U3] Design System Consistency (Crimson #AF1C2B & Blush #FCF1F2)
+console.log('\n[TEST U3] Kiểm tra đồng bộ bộ nhận diện GAME ON (Đỏ Crimson & Hồng Blush)...');
+assert(indexHtml.includes('#FCF1F2') && indexHtml.includes('#AF1C2B'),
+  'Trang chính index.html sử dụng chuẩn nền #FCF1F2 và đỏ #AF1C2B');
+assert(adminHtml.includes('#FCF1F2') && adminHtml.includes('#AF1C2B'),
+  'Trang quản trị admin.html đồng bộ chuẩn nền #FCF1F2 và đỏ #AF1C2B');
+assert(testQrHtml.includes('#FCF1F2') && testQrHtml.includes('#AF1C2B'),
+  'Trang QR mẫu test-qr.html đồng bộ chuẩn nền #FCF1F2 và đỏ #AF1C2B');
+assert(staffCardHtml.includes('#FCF1F2') && staffCardHtml.includes('#AF1C2B'),
+  'Tài liệu hướng dẫn nhân viên đồng bộ chuẩn nền #FCF1F2 và đỏ #AF1C2B');
+assert(indexHtml.includes('Cổng soát vé') && indexHtml.includes('Nhập danh sách'),
+  'Nhãn nút trang chính khớp thiết kế ("Cổng soát vé", "Nhập danh sách")');
 console.log('👉 Test U3: HOÀN THÀNH XUẤT SẮC');
 
 // [TEST U4] Responsive CSS Media Queries & Mobile Layout
@@ -126,8 +134,8 @@ console.log('👉 Test U5: HOÀN THÀNH XUẤT SẮC');
 
 // [TEST U6] Touch Target Ergonomics & Camera Overlay Styles
 console.log('\n[TEST U6] Kiểm tra Touch Target (>=44px) & Scanner Ergonomics...');
-assert(/\.badge-status\s*\{[^}]*min-height:\s*44px/i.test(indexHtml) || /\.badge-status\s*\{[^}]*padding:\s*[6-9]px/i.test(indexHtml),
-  'Badge trạng thái vé đạt diện tích chạm chuẩn ngón tay (min-height: 44px)');
+assert(/@media\s*\([^)]*max-width:\s*768px[^)]*\)[\s\S]*\.badge-status\s*\{[^}]*min-height:\s*44px/i.test(indexHtml),
+  'Badge trạng thái vé trên Mobile đạt diện tích chạm chuẩn ngón tay (min-height: 44px)');
 assert(indexHtml.includes('scanner-controls-bar') || indexHtml.includes('btn-scanner-btn'),
   'Giao diện Scanner có thanh điều khiển ngón cái (Thumb-zone control bar)');
 assert(indexHtml.includes('env(safe-area-inset-bottom') || indexHtml.includes('safe-area'),
@@ -179,19 +187,37 @@ async function runTier2CDP(binPath) {
 
     // Mock endpoints cho test UI
     app.get('/api/stats', (req, res) => {
-      res.json({ all: 12, checked: 5, unchecked: 7, total: 12, remaining: 7 });
+      res.json({
+        all: 5, checked: 2, unchecked: 3, total: 5, totalAll: 5, remaining: 3,
+        by_gate: { 'Cổng chính': 2 },
+        recent_scans: [
+          { at: '2026-11-25T00:31:44+07:00', code: 'HVC-K2MJ8D-U754', name: 'Nguyễn Đức Trung', gate: 'Cổng chính', result: 'OK' }
+        ]
+      });
     });
 
     app.get('/api/tickets', (req, res) => {
       res.json({
-        total: 3,
+        total: 5,
         page: 1,
         limit: 8,
         totalPages: 1,
         tickets: [
-          { stt: 1, code: 'HVC-AUTO-001', name: 'Nguyễn Văn Test', email: 'test@hvc.vn', issuedAt: '2026-11-20T10:00:00Z', label: 'Vé 1/1', checkedIn: 1, checkedAt: '2026-11-24T12:00:00Z', note: 'voucher 50k' },
-          { stt: 2, code: 'HVC-AUTO-002', name: 'Trần Thị Thử', email: 'thu@hvc.vn', issuedAt: '2026-11-20T10:05:00Z', label: 'Vé 1/2', checkedIn: 0, checkedAt: null, note: '' },
-          { stt: 3, code: 'HVC-AUTO-003', name: 'Lê Hoàng Nghiệm', email: 'nghiem@hvc.vn', issuedAt: '2026-11-20T10:10:00Z', label: 'Vé 1/1', checkedIn: 0, checkedAt: null, note: 'Khách VIP' }
+          { stt: 1, code: 'HVC-K2MJ8D-U754', name: 'Nguyễn Đức Trung', email: 'dctrng.work@gmail.com', issuedAt: '2026-11-09T11:10:25+07:00', label: 'Vé 1/2', checkedIn: 1, checkedAt: '2026-11-25T00:31:44+07:00', note: 'voucher' },
+          { stt: 2, code: 'HVC-6CJZG2-EE5C', name: 'Lê Phạm Gia Hân', email: 'giahan.lepham@gmail.com', issuedAt: '2026-11-11T09:20:45+07:00', label: 'Vé 1/1', checkedIn: 1, checkedAt: '2026-11-14T18:05:30+07:00', note: 'khách VIP' },
+          { stt: 3, code: 'HVC-K4YGBF-70EB', name: 'Nguyễn Hoàng Bảo Thy', email: 'bbaothy2204@gmail.com', issuedAt: '2026-11-05T21:19:08+07:00', label: 'Vé 1/1', checkedIn: 0, checkedAt: null, note: 'voucher nước' },
+          { stt: 4, code: 'HVC-50P368-F4F8', name: 'Nguyễn Đức Trung', email: 'dctrng.work@gmail.com', issuedAt: '2026-11-09T11:10:25+07:00', label: 'Vé 2/2', checkedIn: 0, checkedAt: null, note: 'quà tặng áo' },
+          { stt: 5, code: 'HVC-5NS9YA-B711', name: 'Trần Minh Khôi', email: 'minhkhoi.tran26@gmail.com', issuedAt: '2026-11-10T14:35:12+07:00', label: 'Vé 1/1', checkedIn: 0, checkedAt: null, note: '' }
+        ]
+      });
+    });
+
+    app.get('/api/admin/tickets', (req, res) => {
+      res.json({
+        total: 2,
+        items: [
+          { code: 'HVC-K2MJ8D-U754', name: 'Nguyễn Đức Trung', phone: '0868037559', order_id: 'ORD-739734074', label: 'Vé 1/2', type: 'Vé Điện Tử', status: 'VALID', checked_in: 1, gate: 'Cổng chính', checked_at: '2026-11-25T00:31:44+07:00' },
+          { code: 'HVC-50P368-F4F8', name: 'Nguyễn Đức Trung', phone: '0868037559', order_id: 'ORD-739734074', label: 'Vé 2/2', type: 'Vé Điện Tử', status: 'VALID', checked_in: 0, gate: null, checked_at: null }
         ]
       });
     });
@@ -199,17 +225,17 @@ async function runTier2CDP(binPath) {
     app.get('/api/tickets/:code', (req, res) => {
       res.json({
         code: req.params.code,
-        name: 'Nguyễn Văn Test',
-        email: 'test@hvc.vn',
-        phone: '0987654321',
-        issuedAt: '2026-11-20T10:00:00Z',
-        orderId: 'ORD-AUTO-888',
-        paymentInfo: 'PAYOS_AUTO_CONFIRMED',
-        label: 'Vé 1/1',
-        type: 'Vé VIP Sự Kiện',
+        name: 'Nguyễn Đức Trung',
+        email: 'dctrng.work@gmail.com',
+        phone: '0868037559',
+        issuedAt: '2026-11-09T11:10:25+07:00',
+        orderId: 'ORD-739734074',
+        paymentInfo: 'PAYOS_AUTO',
+        label: 'Vé 1/2',
+        type: 'Vé Điện Tử (Player Pass QR)',
         checkedIn: 1,
-        checkedAt: '2026-11-24T12:00:00Z',
-        note: 'voucher 50k'
+        checkedAt: '2026-11-25T00:31:44+07:00',
+        note: 'voucher'
       });
     });
 
@@ -224,7 +250,6 @@ async function runTier2CDP(binPath) {
     const serverUrl = `http://127.0.0.1:${serverPort}/`;
     assert(serverPort > 0, `Server test Express khởi chạy thành công tại ${serverUrl}`);
 
-    // 2. Chọn ngẫu nhiên cổng CDP từ 9600-9800
     const cdpPort = 9600 + Math.floor(Math.random() * 200);
     browserProcess = spawn(binPath, [
       '--headless=new',
@@ -236,7 +261,6 @@ async function runTier2CDP(binPath) {
       'about:blank'
     ]);
 
-    // Chờ CDP socket sẵn sàng
     let pageTarget = null;
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 200));
@@ -253,7 +277,6 @@ async function runTier2CDP(binPath) {
     }
     assert(pageTarget !== null, `Trình duyệt headless (${path.basename(binPath)}) sẵn sàng kết nối CDP`);
 
-    // 3. Kết nối WebSocket CDP
     wsClient = new WebSocket(pageTarget.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => {
       wsClient.onopen = resolve;
@@ -301,8 +324,8 @@ async function runTier2CDP(binPath) {
 
     console.log('👉 Test U7: HOÀN THÀNH XUẤT SẮC');
 
-    // [TEST U8] Desktop Layout (1280x800)
-    console.log('\n[TEST U8] Kiểm tra hiển thị màn hình Máy tính (Desktop 1280x800)...');
+    // [TEST U8] Desktop Layout (1280x800) - Crimson & Blush Mockup Fidelity
+    console.log('\n[TEST U8] Kiểm tra hiển thị trang chính trên Máy tính (Desktop 1280x800)...');
     await sendCdp('Emulation.setDeviceMetricsOverride', {
       width: 1280,
       height: 800,
@@ -311,18 +334,29 @@ async function runTier2CDP(binPath) {
     });
 
     await sendCdp('Page.navigate', { url: serverUrl });
-    await new Promise(r => setTimeout(r, 1200)); // Chờ DOMContentLoaded + loadStats + loadTickets
+    await new Promise(r => setTimeout(r, 1200));
 
     const desktopScrollWidth = await evalJs('document.documentElement.scrollWidth');
     assert(desktopScrollWidth <= 1280, `Desktop (1280px) không có thanh cuộn ngang trang (scrollWidth = ${desktopScrollWidth})`);
 
+    const paletteCheck = await evalJs(`(() => {
+      const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+      const headerBg = window.getComputedStyle(document.querySelector('header')).backgroundColor;
+      const thBg = window.getComputedStyle(document.querySelector('th')).backgroundColor;
+      const thCount = document.querySelectorAll('thead th').length;
+      return { bodyBg, headerBg, thBg, thCount };
+    })()`);
+    assert(paletteCheck.bodyBg === 'rgb(252, 241, 242)', `Màu nền trang khớp mockup #FCF1F2 (${paletteCheck.bodyBg})`);
+    assert(paletteCheck.headerBg === 'rgb(175, 28, 43)', `Màu banner header khớp mockup #AF1C2B (${paletteCheck.headerBg})`);
+    assert(paletteCheck.thBg === 'rgb(175, 28, 43)', `Màu header bảng khớp mockup #AF1C2B (${paletteCheck.thBg})`);
+    assert(paletteCheck.thCount === 8, `Bảng vé hiển thị đúng 8 cột chuẩn mockup (thực tế: ${paletteCheck.thCount})`);
+
     const statAllVal = await evalJs("document.getElementById('stat-all').innerText");
-    assert(statAllVal === '12', `Thẻ đếm "Tất cả" hiển thị đúng dữ liệu API: ${statAllVal}`);
+    assert(statAllVal === '05', `Thẻ đếm "Tất cả" hiển thị đúng dữ liệu API: ${statAllVal}`);
 
     const tableRowsCount = await evalJs("document.querySelectorAll('#tickets-table-body tr').length");
-    assert(tableRowsCount === 3, `Bảng vé render đủ 3 dòng dữ liệu (thực tế: ${tableRowsCount})`);
+    assert(tableRowsCount === 5, `Bảng vé render đủ 5 dòng dữ liệu (thực tế: ${tableRowsCount})`);
 
-    // Chụp ảnh Desktop
     const desktopShot = await sendCdp('Page.captureScreenshot', { format: 'png' });
     fs.writeFileSync(path.join(SCREENSHOT_DIR, 'ui_desktop.png'), Buffer.from(desktopShot.data, 'base64'));
     assert(fs.existsSync(path.join(SCREENSHOT_DIR, 'ui_desktop.png')),
@@ -342,68 +376,31 @@ async function runTier2CDP(binPath) {
     const mobileScrollWidth = await evalJs('document.documentElement.scrollWidth');
     assert(mobileScrollWidth <= 375, `Mobile (375px) hoàn toàn KHÔNG bị tràn ngang vỡ layout (scrollWidth = ${mobileScrollWidth})`);
 
-    // Kiểm tra 3 thẻ stat-card nằm cùng 1 hàng
     const cardsAlignment = await evalJs(`(() => {
       const a = document.getElementById('card-all').getBoundingClientRect();
       const b = document.getElementById('card-checked').getBoundingClientRect();
       const c = document.getElementById('card-unchecked').getBoundingClientRect();
       return {
-        sameRow: Math.abs(a.top - b.top) < 4 && Math.abs(b.top - c.top) < 4,
-        aWidth: a.width,
-        bWidth: b.width,
-        cWidth: c.width
+        sameRow: Math.abs(a.top - b.top) < 4 && Math.abs(b.top - c.top) < 4
       };
     })()`);
     assert(cardsAlignment.sameRow, `3 thẻ thống kê trên mobile nằm thẳng hàng trên 1 dòng duy nhất`);
 
-    // Kiểm tra touch target của badge trạng thái
     const badgeHeight = await evalJs(`(() => {
       const b = document.querySelector('.badge-status');
       return b ? b.getBoundingClientRect().height : 0;
     })()`);
     assert(badgeHeight >= 40, `Touch target của nút trạng thái đạt chuẩn cảm ứng ngón tay (chiều cao: ${badgeHeight}px >= 40px)`);
 
-    // Chụp ảnh Mobile Dark
     const mobileShot = await sendCdp('Page.captureScreenshot', { format: 'png' });
     fs.writeFileSync(path.join(SCREENSHOT_DIR, 'ui_mobile.png'), Buffer.from(mobileShot.data, 'base64'));
     assert(fs.existsSync(path.join(SCREENSHOT_DIR, 'ui_mobile.png')),
       'Đã xuất ảnh chụp giao diện Mobile: data/screenshots/ui_mobile.png');
     console.log('👉 Test U9: HOÀN THÀNH XUẤT SẮC');
 
-    // [TEST U10] Light/Dark Mode Toggle Interactive Runtime
-    console.log('\n[TEST U10] Kiểm tra chuyển đổi Light/Dark mode tương tác thời gian thực...');
-    const initialTheme = await evalJs("document.documentElement.getAttribute('data-theme') || 'dark'");
-    assert(initialTheme === 'dark', 'Giao diện khởi đầu ở Dark theme mặc định');
-
-    // Click nút toggle
-    await evalJs("document.getElementById('btn-theme-toggle').click()");
-    await new Promise(r => setTimeout(r, 200));
-
-    const lightTheme = await evalJs("document.documentElement.getAttribute('data-theme')");
-    assert(lightTheme === 'light', 'Sau khi click nút toggle, data-theme chuyển thành "light"');
-
-    const savedTheme = await evalJs("localStorage.getItem('hvc_theme')");
-    assert(savedTheme === 'light', 'Trạng thái "light" được lưu bền vững vào localStorage');
-
-    const bodyBgLight = await evalJs("window.getComputedStyle(document.body).backgroundColor");
-    assert(bodyBgLight.includes('248') || bodyBgLight.includes('255') || bodyBgLight.includes('250'),
-      `Màu nền body chuyển sang sáng thành công (computed: ${bodyBgLight})`);
-
-    // Chụp ảnh Mobile Light
-    const lightShot = await sendCdp('Page.captureScreenshot', { format: 'png' });
-    fs.writeFileSync(path.join(SCREENSHOT_DIR, 'ui_mobile_light.png'), Buffer.from(lightShot.data, 'base64'));
-
-    // Click toggle lần 2 quay lại Dark
-    await evalJs("document.getElementById('btn-theme-toggle').click()");
-    await new Promise(r => setTimeout(r, 200));
-
-    const revertedTheme = await evalJs("document.documentElement.getAttribute('data-theme')");
-    assert(revertedTheme === 'dark', 'Click lại nút toggle, data-theme chuyển về "dark"');
-    console.log('👉 Test U10: HOÀN THÀNH XUẤT SẮC');
-
-    // [TEST U11] Modal Interactive Opening, Fitting, and Closing
-    console.log('\n[TEST U11] Kiểm tra mở Modal chi tiết vé & Bounding Box trong Viewport Mobile...');
-    await evalJs("viewTicketDetail('HVC-AUTO-001')");
+    // [TEST U10] Modal Interactive Opening, Fitting, and Closing on Mobile
+    console.log('\n[TEST U10] Kiểm tra mở Modal chi tiết vé & Bounding Box trong Viewport Mobile...');
+    await evalJs("viewTicketDetail('HVC-K2MJ8D-U754')");
     await new Promise(r => setTimeout(r, 400));
 
     const modalState = await evalJs(`(() => {
@@ -424,7 +421,7 @@ async function runTier2CDP(binPath) {
     })()`);
 
     assert(modalState.display === 'flex', 'Modal chi tiết hiển thị (display: flex)');
-    assert(modalState.code === 'HVC-AUTO-001', `Thông tin mã vé trong modal chính xác: ${modalState.code}`);
+    assert(modalState.code === 'HVC-K2MJ8D-U754', `Thông tin mã vé trong modal chính xác: ${modalState.code}`);
     assert(modalState.boxWidth <= modalState.windowWidth,
       `Chiều rộng modal (${modalState.boxWidth}px) không tràn màn hình mobile (${modalState.windowWidth}px)`);
     assert(modalState.boxHeight <= modalState.windowHeight,
@@ -432,21 +429,61 @@ async function runTier2CDP(binPath) {
     assert(modalState.overflowY === 'auto',
       'Thân modal có overflow-y: auto giúp cuộn mượt khi nội dung dài');
 
-    // Chụp ảnh Modal
     const modalShot = await sendCdp('Page.captureScreenshot', { format: 'png' });
     fs.writeFileSync(path.join(SCREENSHOT_DIR, 'ui_mobile_modal.png'), Buffer.from(modalShot.data, 'base64'));
 
-    // Đóng modal
     await evalJs("closeTicketModal()");
     await new Promise(r => setTimeout(r, 200));
     const isModalClosed = await evalJs("document.getElementById('ticket-modal').style.display === 'none'");
     assert(isModalClosed, 'Modal đóng thành công khi nhấn nút đóng');
+    console.log('👉 Test U10: HOÀN THÀNH XUẤT SẮC');
+
+    // [TEST U11] Kiểm tra các trang phụ (Admin & Test QR)
+    console.log('\n[TEST U11] Kiểm tra đồng bộ giao diện trên trang Quản trị (admin.html) & Trang QR (test-qr.html)...');
+    await sendCdp('Emulation.setDeviceMetricsOverride', {
+      width: 1280,
+      height: 800,
+      deviceScaleFactor: 1,
+      mobile: false
+    });
+    await sendCdp('Page.navigate', { url: `${serverUrl}admin.html` });
+    await new Promise(r => setTimeout(r, 800));
+    await evalJs("sessionStorage.setItem('soatve_admin_pin', '123456'); location.reload();");
+    await new Promise(r => setTimeout(r, 1000));
+
+    const adminCheck = await evalJs(`(() => {
+      return {
+        bodyBg: window.getComputedStyle(document.body).backgroundColor,
+        headerBg: window.getComputedStyle(document.querySelector('header')).backgroundColor,
+        scrollWidth: document.documentElement.scrollWidth
+      };
+    })()`);
+    assert(adminCheck.bodyBg === 'rgb(252, 241, 242)', `Admin background khớp chuẩn #FCF1F2 (${adminCheck.bodyBg})`);
+    assert(adminCheck.headerBg === 'rgb(175, 28, 43)', `Admin header khớp chuẩn #AF1C2B (${adminCheck.headerBg})`);
+    assert(adminCheck.scrollWidth <= 1280, `Admin Desktop không tràn ngang (scrollWidth = ${adminCheck.scrollWidth})`);
+
+    const adminShot = await sendCdp('Page.captureScreenshot', { format: 'png' });
+    fs.writeFileSync(path.join(SCREENSHOT_DIR, 'ui_admin.png'), Buffer.from(adminShot.data, 'base64'));
+
+    await sendCdp('Page.navigate', { url: `${serverUrl}test-qr.html` });
+    await new Promise(r => setTimeout(r, 600));
+    const qrCheck = await evalJs(`(() => {
+      return {
+        bodyBg: window.getComputedStyle(document.body).backgroundColor,
+        headerBg: window.getComputedStyle(document.querySelector('header')).backgroundColor
+      };
+    })()`);
+    assert(qrCheck.bodyBg === 'rgb(252, 241, 242)', `Trang test-qr background khớp chuẩn #FCF1F2 (${qrCheck.bodyBg})`);
+    assert(qrCheck.headerBg === 'rgb(175, 28, 43)', `Trang test-qr header khớp chuẩn #AF1C2B (${qrCheck.headerBg})`);
+    const qrShot = await sendCdp('Page.captureScreenshot', { format: 'png' });
+    fs.writeFileSync(path.join(SCREENSHOT_DIR, 'ui_test_qr.png'), Buffer.from(qrShot.data, 'base64'));
+
     console.log('👉 Test U11: HOÀN THÀNH XUẤT SẮC');
 
     // [TEST U12] Responsive Verification Screenshots
-    console.log('\n[TEST U12] Kiểm tra danh mục hình ảnh kiểm thử Responsive...');
+    console.log('\n[TEST U12] Kiểm tra danh mục hình ảnh kiểm thử thực tế...');
     const screenshots = fs.readdirSync(SCREENSHOT_DIR).filter(f => f.endsWith('.png'));
-    assert(screenshots.length >= 3, `Đã lưu ${screenshots.length} ảnh kiểm thử thực tế (${screenshots.join(', ')})`);
+    assert(screenshots.length >= 4, `Đã lưu ${screenshots.length} ảnh kiểm thử thực tế (${screenshots.join(', ')})`);
     console.log('👉 Test U12: HOÀN THÀNH XUẤT SẮC');
 
   } catch (err) {

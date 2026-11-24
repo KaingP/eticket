@@ -95,8 +95,8 @@ async function generateTestQrs() {
         <div class="qr-code-text">${t.code}</div>
         <div class="qr-info">
           <strong>${t.name}</strong> • ${t.label}<br>
-          <span style="font-size:12px; color:#555;">${t.type} (${t.orderId})</span>
-          ${t.note ? `<div style="margin-top:6px; font-weight:bold; color:#7c3aed; background:#f3e8ff; border:1px solid #d8b4fe; padding:4px 8px; border-radius:6px; font-size:12px;">🎁 Ghi chú: ${t.note}</div>` : ''}
+          <span style="font-size:12px; color:#785A5E;">${t.type} (${t.orderId})</span>
+          ${t.note ? `<div style="margin-top:6px; font-weight:bold; color:#9E1C2A; background:#F9DFE2; border:1px solid #E5B4BA; padding:4px 8px; border-radius:6px; font-size:12px;">🎁 Ghi chú: ${t.note}</div>` : ''}
         </div>
         <div class="qr-expected" style="background:${badgeColor}; color:#fff;">
           Dự kiến: ${t.expected}
@@ -111,39 +111,68 @@ async function generateTestQrs() {
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mã QR Soát Vé - Hùng Vương Concert: GAME ON</title>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: Arial, sans-serif;
-      background: #f1f5f9;
-      margin: 0;
-      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: #FCF1F2;
+      color: #2D1618;
+      min-height: 100vh;
     }
+    header {
+      background: #AF1C2B;
+      color: #FFFFFF;
+      padding: 16px 32px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before, header::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0; width: 110px;
+      pointer-events: none;
+      background-image:
+        linear-gradient(45deg, rgba(120, 12, 24, 0.32) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(120, 12, 24, 0.32) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(120, 12, 24, 0.32) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(120, 12, 24, 0.32) 75%);
+      background-size: 24px 24px;
+      background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+    }
+    header::before { left: 0; -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,0.95), transparent); mask-image: linear-gradient(to right, rgba(0,0,0,0.95), transparent); }
+    header::after { right: 0; -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,0.95), transparent); mask-image: linear-gradient(to left, rgba(0,0,0,0.95), transparent); }
+    .brand { position: relative; z-index: 1; text-align: center; }
+    .brand-sub { font-size: 11px; font-weight: 600; letter-spacing: 1.4px; color: rgba(255,255,255,0.92); text-transform: uppercase; }
     h1 {
-      text-align: center;
-      margin-bottom: 6px;
-      color: #0f172a;
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      margin: 2px 0 4px;
+      color: #FFFFFF;
     }
     p.subtitle {
       text-align: center;
-      color: #64748b;
-      margin-top: 0;
-      margin-bottom: 24px;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 13px;
     }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 20px;
-      max-width: 1000px;
+      max-width: 1080px;
       margin: 0 auto;
+      padding: 0 20px 40px;
     }
     .qr-card {
-      background: #fff;
-      border: 2px solid #cbd5e1;
-      border-radius: 12px;
-      padding: 16px;
+      background: #FFFFFF;
+      border: 1px solid #E2C4C7;
+      border-radius: 14px;
+      padding: 18px;
       text-align: center;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 12px rgba(175, 28, 43, 0.06);
       page-break-inside: avoid;
     }
     .qr-img-box img {
@@ -154,29 +183,35 @@ async function generateTestQrs() {
       font-family: monospace;
       font-size: 16px;
       font-weight: bold;
-      color: #0284c7;
+      color: #AF1C2B;
       margin: 8px 0 4px 0;
     }
     .qr-info {
       font-size: 13px;
-      margin-bottom: 10px;
-      color: #1e293b;
+      margin-bottom: 12px;
+      color: #2D1618;
     }
     .qr-expected {
-      padding: 6px 10px;
-      border-radius: 6px;
+      padding: 7px 10px;
+      border-radius: 8px;
       font-size: 12px;
       font-weight: bold;
     }
     @media print {
-      body { background: #fff; padding: 0; }
+      body { background: #fff; }
+      header { background: #AF1C2B !important; -webkit-print-color-adjust: exact; }
       .grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
 <body>
-  <h1>HÙNG VƯƠNG CONCERT: GAME ON</h1>
-  <p class="subtitle">Bảng Mã QR Kiểm Thử Hệ Thống Soát Vé Offline</p>
+  <header>
+    <div class="brand">
+      <div class="brand-sub">HÙNG VƯƠNG CONCERT</div>
+      <h1>GAME ON • MÃ QR KIỂM THỬ</h1>
+      <p class="subtitle">Bảng Mã QR Kiểm Thử Hệ Thống Soát Vé Offline LAN</p>
+    </div>
+  </header>
   <div class="grid">
     ${cardsHtml.join('')}
   </div>

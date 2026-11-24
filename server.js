@@ -770,70 +770,103 @@ app.get('/qr', async (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mã QR Soát Vé - Hùng Vương Concert</title>
+  <title>Mã QR Soát Vé - Hùng Vương Concert: GAME ON</title>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0f172a;
-      color: #f8fafc;
+      background: #FCF1F2;
+      color: #2D1618;
       display: flex;
       flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      background: #AF1C2B;
+      color: #FFFFFF;
+      padding: 16px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before, header::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0; width: 110px;
+      pointer-events: none;
+      background-image:
+        linear-gradient(45deg, rgba(120, 12, 24, 0.32) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(120, 12, 24, 0.32) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(120, 12, 24, 0.32) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(120, 12, 24, 0.32) 75%);
+      background-size: 24px 24px;
+      background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+    }
+    header::before { left: 0; -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,0.95), transparent); mask-image: linear-gradient(to right, rgba(0,0,0,0.95), transparent); }
+    header::after { right: 0; -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,0.95), transparent); mask-image: linear-gradient(to left, rgba(0,0,0,0.95), transparent); }
+    .brand { position: relative; z-index: 1; }
+    .brand-sub { font-size: 11px; font-weight: 600; letter-spacing: 1.4px; color: rgba(255,255,255,0.92); text-transform: uppercase; }
+    .brand-main { font-size: 24px; font-weight: 900; letter-spacing: 1px; line-height: 1.1; }
+    .main-wrap {
+      flex: 1;
+      display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
-      margin: 0;
-      padding: 20px;
-      text-align: center;
+      padding: 24px 16px;
     }
     .card {
-      background: #1e293b;
+      background: #FFFFFF;
       padding: 32px 24px;
-      border-radius: 20px;
-      border: 1px solid #334155;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+      border-radius: 16px;
+      border: 1px solid #E2C4C7;
+      box-shadow: 0 8px 28px rgba(175, 28, 43, 0.08);
       max-width: 440px;
       width: 100%;
+      text-align: center;
     }
     h1 {
       font-size: 20px;
-      color: #38bdf8;
+      color: #AF1C2B;
       margin-bottom: 6px;
+      font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
     }
     p.sub {
       font-size: 14px;
-      color: #94a3b8;
-      margin-top: 0;
+      color: #785A5E;
       margin-bottom: 20px;
     }
     .qr-box {
-      background: #fff;
+      background: #FCF5F6;
       padding: 16px;
-      border-radius: 16px;
+      border-radius: 14px;
+      border: 2px solid #F3D1D5;
       display: inline-block;
       margin-bottom: 20px;
     }
     .qr-box img {
-      width: 280px;
-      height: 280px;
+      width: 260px;
+      height: 260px;
       display: block;
     }
     .url-badge {
-      background: #0f172a;
-      border: 1px solid #475569;
-      color: #38bdf8;
+      background: #FCF1F2;
+      border: 1px solid #E2C4C7;
+      color: #AF1C2B;
       padding: 10px 16px;
       border-radius: 10px;
       font-family: monospace;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
       word-break: break-all;
       margin-bottom: 16px;
     }
     .hint {
       font-size: 13px;
-      color: #cbd5e1;
+      color: #5A3A3E;
       line-height: 1.5;
     }
     .links {
@@ -843,30 +876,39 @@ app.get('/qr', async (req, res) => {
       justify-content: center;
     }
     .btn {
-      color: #fff;
-      background: #0284c7;
+      color: #FFFFFF;
+      background: #AF1C2B;
       text-decoration: none;
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 13px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 14px;
       font-weight: 600;
     }
+    .btn:hover { background: #8F1421; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>HÙNG VƯƠNG CONCERT: GAME ON</h1>
-    <p class="sub">Mở Camera điện thoại quét mã dưới đây để vào Soát Vé</p>
-    <div class="qr-box">
-      <img src="${qrDataUrl}" alt="QR Soat Ve">
+  <header>
+    <div class="brand">
+      <div class="brand-sub">HÙNG VƯƠNG CONCERT</div>
+      <div class="brand-main">GAME ON</div>
     </div>
-    <div class="url-badge">${primaryUrl}</div>
-    <div class="hint">
-      👉 Chỉ cần kết nối Wi-Fi sự kiện rồi quét mã QR ở trên.<br>
-      Không cần gõ địa chỉ IP!
-    </div>
-    <div class="links">
-      <a href="/" class="btn">Vào Cổng Soát Vé</a>
+  </header>
+  <div class="main-wrap">
+    <div class="card">
+      <h1>KẾT NỐI CỔNG SOÁT VÉ LAN</h1>
+      <p class="sub">Mở Camera điện thoại quét mã dưới đây để vào Soát Vé</p>
+      <div class="qr-box">
+        <img src="${qrDataUrl}" alt="QR Soat Ve">
+      </div>
+      <div class="url-badge">${primaryUrl}</div>
+      <div class="hint">
+        👉 Chỉ cần kết nối Wi-Fi sự kiện rồi quét mã QR ở trên.<br>
+        Không cần gõ địa chỉ IP!
+      </div>
+      <div class="links">
+        <a href="/" class="btn">Vào Cổng Soát Vé</a>
+      </div>
     </div>
   </div>
 </body>
