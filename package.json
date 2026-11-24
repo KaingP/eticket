@@ -9,7 +9,8 @@
     "export": "node export.js",
     "make-qr": "node make-test-qr.js",
     "make-card": "node make-staff-card.js",
-    "test": "node test.js"
+    "test": "node test.js",
+    "test:ui": "node test_ui.js"
   },
   "keywords": [
     "ticket-checkin",
