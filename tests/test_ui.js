@@ -13,7 +13,7 @@ const os = require('os');
 const { spawn } = require('child_process');
 const express = require('express');
 
-const PROJECT_DIR = path.resolve(__dirname);
+const PROJECT_DIR = fs.existsSync(path.join(__dirname, 'server.js')) ? path.resolve(__dirname) : path.resolve(__dirname, '..');
 const INDEX_HTML_PATH = path.join(PROJECT_DIR, 'public', 'index.html');
 const SCREENSHOT_DIR = path.join(PROJECT_DIR, 'data', 'screenshots');
 

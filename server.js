@@ -158,8 +158,17 @@ function ensureSslCert(primaryIp, allIps) {
 
   if (needsGen) {
     let opensslCmd = 'openssl';
-    if (fs.existsSync('E:\\SBP\\c\\bin\\openssl.exe')) {
-      opensslCmd = '"E:\\SBP\\c\\bin\\openssl.exe"';
+    // Kiểm tra openssl trong PATH hoặc các đường dẫn phổ biến trên Windows
+    const commonOpensslPaths = [
+      'C:\\Program Files\\OpenSSL-Win64\\bin\\openssl.exe',
+      'C:\\Program Files\\Git\\usr\\bin\\openssl.exe',
+      'C:\\OpenSSL-Win64\\bin\\openssl.exe'
+    ];
+    for (const p of commonOpensslPaths) {
+      if (fs.existsSync(p)) {
+        opensslCmd = `"${p}"`;
+        break;
+      }
     }
 
     try {

@@ -33,22 +33,28 @@ Hệ thống được thiết kế tối giản, tập trung toàn bộ nghiệp
 
 ---
 
-## 2. CÀI ĐẶT & KHỞI ĐỘNG HỆ THỐNG (3 BƯỚC SIÊU NHANH)
+## 2. CÀI ĐẶT & KHỞI ĐỘNG HỆ THỐNG (CHẠY TRÊN MỌI MÁY TÍNH)
 
-### Bước 2.1: Cài đặt thư viện (chỉ chạy 1 lần khi mới tải code)
-Mở cửa sổ dòng lệnh (PowerShell / Terminal) tại thư mục `E:\scanticket`:
+### Cách 1: Khởi động 1-Click (Khuyên dùng - Nhanh nhất trên mọi máy)
+- **Trên Windows:** Chỉ cần click đúp vào file **`start.bat`**.
+  - Script tự kiểm tra môi trường Node.js.
+  - Tự động cài đặt thư viện (`npm install`) nếu máy mới chưa có `node_modules`.
+  - Tự động nạp dữ liệu vé mẫu `tickets_sample.json` nếu CSDL chưa khởi tạo.
+  - Tự động khởi chạy Server và in mã QR để quét vào điện thoại!
+- **Trên macOS / Linux:** Mở Terminal và chạy:
+  ```bash
+  chmod +x start.sh && ./start.sh
+  ```
+
+### Cách 2: Khởi động thủ công bằng dòng lệnh (3 bước)
 ```bash
+# Bước 1: Cài đặt thư viện (chỉ chạy 1 lần khi mới tải code)
 npm install
-```
 
-### Bước 2.2: Nhập danh sách vé ban đầu vào CSDL
-```bash
+# Bước 2: Nhập danh sách vé ban đầu vào CSDL
 node import.js tickets_sample.json
-```
-*(Hoặc có thể ấn nút "Nhập danh sách" trực tiếp trên giao diện web bất cứ lúc nào).*
 
-### Bước 2.3: Khởi động Server soát vé
-```bash
+# Bước 3: Khởi động Server soát vé
 node server.js
 ```
 Ngay lập tức, màn hình dòng lệnh của Laptop sẽ hiện **MÃ QR TERMINAL TO RÕ**:

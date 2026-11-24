@@ -4,5 +4,9 @@ data/*.db
 data/*.db-wal
 data/*.db-shm
 data/test_qrs/
+data/screenshots/
+data/tickets_export.*
+data/temp_*
 *.log
 .DS_Store
+Thumbs.db

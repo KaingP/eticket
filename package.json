@@ -7,10 +7,12 @@
     "start": "node server.js",
     "import": "node import.js",
     "export": "node export.js",
-    "make-qr": "node make-test-qr.js",
-    "make-card": "node make-staff-card.js",
-    "test": "node test.js",
-    "test:ui": "node test_ui.js"
+    "make-qr": "node scripts/make-test-qr.js",
+    "make-card": "node scripts/make-staff-card.js",
+    "test": "node tests/test.js",
+    "test:specs": "node tests/test_drive_specs.js",
+    "test:ui": "node tests/test_ui.js",
+    "test:all": "node tests/test.js && node tests/test_drive_specs.js && node tests/test_ui.js"
   },
   "keywords": [
     "ticket-checkin",

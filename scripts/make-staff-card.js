@@ -8,8 +8,9 @@ const path = require('path');
 const os = require('os');
 const QRCode = require('qrcode');
 
-const DATA_DIR = path.join(__dirname, 'data');
-const OUT_FILE = path.join(DATA_DIR, 'huong-dan-nhan-vien.html');
+const ROOT_DIR = fs.existsSync(path.join(__dirname, 'server.js')) ? __dirname : path.resolve(__dirname, '..');
+const DOCS_DIR = path.join(ROOT_DIR, 'docs');
+const OUT_FILE = path.join(DOCS_DIR, 'huong-dan-nhan-vien.html');
 
 function getPrimaryIp() {
   const interfaces = os.networkInterfaces();

@@ -9,8 +9,9 @@
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
-const { app, db, handleCheckin } = require('./server');
-const { importTicketsData } = require('./import');
+const ROOT_DIR = fs.existsSync(path.join(__dirname, 'server.js')) ? __dirname : path.resolve(__dirname, '..');
+const { app, db, handleCheckin } = require(path.join(ROOT_DIR, 'server'));
+const { importTicketsData } = require(path.join(ROOT_DIR, 'import'));
 
 function assert(cond, msg) {
   if (!cond) {
