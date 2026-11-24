@@ -245,6 +245,7 @@
       display: flex;
       align-items: center;
       justify-content: flex-start;
+      gap: 10px;
     }
     .btn-scanner-launch {
       background: #FFFFFF;
@@ -260,6 +261,30 @@
     .btn-scanner-launch:hover {
       border-color: var(--primary);
       background: #FFF8F8;
+    }
+    .btn-reload {
+      background: #FFFFFF;
+      color: #3D1A1E;
+      border: 1px solid #DFC2C5;
+      border-radius: 10px;
+      padding: 9px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      min-height: 42px;
+      box-shadow: 0 1px 3px rgba(175, 28, 43, 0.05);
+      flex-shrink: 0;
+    }
+    .btn-reload:hover {
+      border-color: var(--primary);
+      background: #FFF8F8;
+      color: var(--primary);
+    }
+    .btn-reload.spinning svg {
+      animation: spinOnce 0.45s ease;
+    }
+    @keyframes spinOnce {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
     }
 
     /* Thanh Thẻ Đếm + Tìm Kiếm ngang hàng */
@@ -911,9 +936,13 @@
         gap: 12px;
       }
       .btn-scanner-launch {
-        width: 100%;
+        flex: 1;
         justify-content: center;
         min-height: 44px;
+      }
+      .btn-reload {
+        min-height: 44px;
+        padding: 9px 14px;
       }
       .controls-toolbar {
         flex-direction: column;
@@ -1039,11 +1068,15 @@
   <!-- Container -->
   <main class="container">
 
-    <!-- Nút Cổng soát vé -->
+    <!-- Nút Cổng soát vé & Làm mới -->
     <div class="scanner-launch-row">
       <button class="btn btn-scanner-launch" id="btn-open-scanner" onclick="openScanner()">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="7" width="4" height="4"/><rect x="7" y="13" width="4" height="4"/><path d="M13 13h4v4h-4"/></svg>
         <span>Cổng soát vé</span>
+      </button>
+      <button class="btn btn-reload" id="btn-reload" onclick="refreshDashboard()" title="Tải lại dữ liệu mới nhất">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        <span>Tải lại</span>
       </button>
     </div>
 
@@ -1364,6 +1397,12 @@
     }
 
     function refreshDashboard() {
+      const btn = document.getElementById('btn-reload');
+      if (btn) {
+        btn.classList.remove('spinning');
+        void btn.offsetWidth;
+        btn.classList.add('spinning');
+      }
       loadStats();
       loadTickets();
       showToast('Đã làm mới dữ liệu');
