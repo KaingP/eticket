@@ -635,13 +635,30 @@
       overflow: hidden;
     }
     #camera-reader {
+      position: absolute !important;
+      top: 0; left: 0; width: 100% !important;
+      height: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      overflow: hidden;
+    }
+    #camera-reader div,
+    #camera-reader__scan_region {
       width: 100% !important;
       height: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
     }
     #camera-reader video {
       object-fit: cover !important;
       width: 100% !important;
       height: 100% !important;
+      position: absolute !important;
+      top: 0; left: 0;
+      transform: translate3d(0, 0, 0);
+      -webkit-transform: translate3d(0, 0, 0);
     }
     /* Khung ngắm quét */
     .scan-target-box {
@@ -1627,7 +1644,10 @@
         try { await navigator.wakeLock.request('screen'); } catch (e) {}
       }
 
-      startCamera();
+      // Đợi WebKit / Safari layout xong kích thước thực của vùng chứa camera trước khi start
+      requestAnimationFrame(() => {
+        setTimeout(startCamera, 120);
+      });
     }
 
     function getQrFormat() {
@@ -1646,7 +1666,7 @@
         formatsToSupport: [ qrFormat ], // Chỉ quét QR: giảm tải CPU 80%, phản hồi tức thì
         verbose: false,
         experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true // Tăng tốc phần cứng native BarcodeDetector API (Android Chrome & iOS Safari 17+)
+          useBarCodeDetectorIfSupported: false // BẮT BUỘC tắt trên iOS Safari vì native BarcodeDetector của WebKit gây lỗi màn hình đen
         }
       });
     }
@@ -1659,8 +1679,8 @@
           const minEdge = Math.min(viewfinderWidth || 300, viewfinderHeight || 300);
           const size = Math.max(150, Math.floor(minEdge * 0.75));
           return { width: size, height: size };
-        },
-        aspectRatio: 1.0
+        }
+        // Không ép aspectRatio để iOS Safari giữ nguyên tỉ lệ cảm biến camera gốc (4:3 / 16:9) tránh bị sập luồng video
       };
     }
 
@@ -1713,19 +1733,38 @@
       isCameraScanning = true;
       isTorchOn = false;
 
-      // Áp dụng continuous autofocus an toàn nếu camera hỗ trợ
+      // Đảm bảo video inline, tắt âm thanh và tự động play trên iOS Safari
       try {
         const videoElem = document.querySelector('#camera-reader video');
-        if (videoElem && videoElem.srcObject) {
-          const track = videoElem.srcObject.getVideoTracks()[0];
-          if (track && track.getCapabilities && track.applyConstraints) {
-            const caps = track.getCapabilities();
-            if (caps.focusMode && caps.focusMode.includes('continuous')) {
-              track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
-            }
+        if (videoElem) {
+          videoElem.setAttribute('playsinline', 'true');
+          videoElem.setAttribute('webkit-playsinline', 'true');
+          videoElem.muted = true;
+          videoElem.autoplay = true;
+          videoElem.style.transform = 'translate3d(0, 0, 0)';
+          videoElem.style.webkitTransform = 'translate3d(0, 0, 0)';
+          if (videoElem.paused) {
+            videoElem.play().catch(() => {});
           }
         }
       } catch (e) {}
+
+      // Chỉ áp dụng continuous autofocus nếu KHÔNG phải iOS Safari (tránh xung đột WebKit AVCaptureSession gây đen hình)
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (!isIOS) {
+        try {
+          const videoElem = document.querySelector('#camera-reader video');
+          if (videoElem && videoElem.srcObject) {
+            const track = videoElem.srcObject.getVideoTracks()[0];
+            if (track && track.getCapabilities && track.applyConstraints) {
+              const caps = track.getCapabilities();
+              if (caps.focusMode && caps.focusMode.includes('continuous')) {
+                track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+              }
+            }
+          }
+        } catch (e) {}
+      }
 
       const torchBtn = document.getElementById('btn-torch');
       if (torchBtn) {
@@ -1796,7 +1835,9 @@
         }
         await html5QrCode.stop();
         isCameraScanning = false;
-        startCameraWithId(nextCamera.id);
+        setTimeout(() => {
+          startCameraWithId(nextCamera.id);
+        }, 150);
       } catch (e) {
         console.error('Không thể chuyển camera:', e);
       }
