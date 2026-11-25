@@ -160,8 +160,8 @@ Trình duyệt di động (đặc biệt là Safari iOS và Chrome Android) **b�
   - Bấm dấu `✕` bên phải ô tìm kiếm để quay về danh sách đầy đủ.
 
 ### 4.2. Bảng danh sách vé & Thao tác trên từng vé
-Bảng hiển thị phân trang mỗi **20 vé/trang** với **8 cột**:
-`STT | Tên khách hàng | Email | Thời điểm mua vé | Mã vé | Số lượng vé | Trạng thái | Thời điểm check in`
+Bảng hiển thị phân trang mỗi **20 vé/trang** với **9 cột**:
+`STT | Tên khách hàng | Email | Thời điểm mua vé | Mã vé | Số lượng vé | Trạng thái | Thời điểm check in | Ghi chú`
 
 1. **Xem chi tiết vé & Ghi chú (Note):**
    - Nhấp trực tiếp vào **Mã vé** màu đỏ (ví dụ `HVC-K2MJ8D-U754`) để mở modal **Chi tiết mã vé**.

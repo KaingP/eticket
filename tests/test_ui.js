@@ -217,10 +217,14 @@ async function runTier2CDP(binPath) {
       res.json({
         total: 2,
         items: [
-          { code: 'HVC-K2MJ8D-U754', name: 'Nguyễn Đức Trung', phone: '0868037559', order_id: 'ORD-739734074', label: 'Vé 1/2', type: 'Vé Điện Tử', status: 'VALID', checked_in: 1, gate: 'Cổng chính', checked_at: '2026-11-25T00:31:44+07:00' },
-          { code: 'HVC-50P368-F4F8', name: 'Nguyễn Đức Trung', phone: '0868037559', order_id: 'ORD-739734074', label: 'Vé 2/2', type: 'Vé Điện Tử', status: 'VALID', checked_in: 0, gate: null, checked_at: null }
+          { code: 'HVC-K2MJ8D-U754', name: 'Nguyễn Đức Trung', phone: '0868037559', order_id: 'ORD-739734074', label: 'Vé 1/2', type: 'Vé Điện Tử', status: 'VALID', checked_in: 1, gate: 'Cổng chính', checked_at: '2026-11-25T00:31:44+07:00', note: 'voucher' },
+          { code: 'HVC-50P368-F4F8', name: 'Nguyễn Đức Trung', phone: '0868037559', order_id: 'ORD-739734074', label: 'Vé 2/2', type: 'Vé Điện Tử', status: 'VALID', checked_in: 0, gate: null, checked_at: null, note: 'quà tặng áo' }
         ]
       });
+    });
+
+    app.post('/api/tickets/:code/note', (req, res) => {
+      res.json({ success: true, status: 'OK', code: req.params.code, note: (req.body && req.body.note) || '' });
     });
 
     app.get('/api/tickets/:code', (req, res) => {
@@ -367,7 +371,16 @@ async function runTier2CDP(binPath) {
     assert(paletteCheck.bodyBg === 'rgb(252, 241, 242)', `Màu nền trang khớp mockup #FCF1F2 (${paletteCheck.bodyBg})`);
     assert(paletteCheck.headerBg === 'rgb(175, 28, 43)', `Màu banner header khớp mockup #AF1C2B (${paletteCheck.headerBg})`);
     assert(paletteCheck.thBg === 'rgb(175, 28, 43)', `Màu header bảng khớp mockup #AF1C2B (${paletteCheck.thBg})`);
-    assert(paletteCheck.thCount === 8, `Bảng vé hiển thị đúng 8 cột chuẩn mockup (thực tế: ${paletteCheck.thCount})`);
+    assert(paletteCheck.thCount === 9, `Bảng vé hiển thị đủ 9 cột gồm cột Ghi chú (thực tế: ${paletteCheck.thCount})`);
+
+    const noteBadgesCheck = await evalJs(`(() => {
+      const pills = Array.from(document.querySelectorAll('#tickets-table-body .note-pill')).map(el => el.innerText.trim());
+      const addBtns = document.querySelectorAll('#tickets-table-body .note-add-btn').length;
+      return { pills, addBtns };
+    })()`);
+    assert(noteBadgesCheck.pills.some(p => p.includes('voucher')) && noteBadgesCheck.pills.some(p => p.includes('khách VIP')),
+      `Hiển thị trực tiếp badge Ghi chú trên bảng chính (${noteBadgesCheck.pills.join(' | ')})`);
+    assert(noteBadgesCheck.addBtns === 1, `Hiển thị nút "+ Ghi chú" cho vé chưa có ghi chú (thực tế: ${noteBadgesCheck.addBtns})`);
 
     const statAllVal = await evalJs("document.getElementById('stat-all').innerText");
     assert(statAllVal === '05', `Thẻ đếm "Tất cả" hiển thị đúng dữ liệu API: ${statAllVal}`);
@@ -516,9 +529,13 @@ async function runTier2CDP(binPath) {
 
       document.getElementById('btn-open-scanner').click();
 
-      // Chờ camera khởi động & kiểm tra nút Flash + Đổi Cam xuất hiện
+      // Chờ camera khởi động & ổn định kích thước video cover trước khi đo
       for (let i = 0; i < 40; i++) {
-        if (isCameraScanning && document.getElementById('btn-torch').style.display !== 'none') break;
+        const v = document.querySelector('#camera-reader video');
+        if (isCameraScanning && document.getElementById('btn-torch').style.display !== 'none' && v && v.videoWidth > 0 && v.clientWidth > 0) {
+          fitScannerVideoCover(v);
+          break;
+        }
         await new Promise(r => setTimeout(r, 50));
       }
 

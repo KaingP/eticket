@@ -479,6 +479,7 @@
               <th>Trạng thái</th>
               <th>Cổng vào</th>
               <th>Thời gian vào</th>
+              <th>Ghi chú</th>
               <th>Thao tác</th>
             </tr>
           </thead>
@@ -598,7 +599,7 @@
       const search = document.getElementById('search-filter-input').value.trim();
       const filter = document.getElementById('status-filter-select').value;
       const tbody = document.getElementById('tickets-tbody');
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px;">Đang tải...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px;">Đang tải...</td></tr>';
 
       try {
         const url = `/api/admin/tickets?filter=${filter}&search=${encodeURIComponent(search)}&limit=100`;
@@ -619,7 +620,7 @@
 
         tbody.innerHTML = '';
         if (!data.items || data.items.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px; color:#64748b;">Không có vé nào phù hợp</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px; color:#64748b;">Không có vé nào phù hợp</td></tr>';
           return;
         }
 
@@ -649,6 +650,18 @@
             <td>${escapeHtml(t.gate || '---')}</td>
             <td style="font-size:12px;">${escapeHtml(timeStr)}</td>
           `;
+          const noteTd = document.createElement('td');
+          const noteVal = (t.note || '').trim();
+          const noteBtn = document.createElement('span');
+          noteBtn.style.cssText = noteVal
+            ? 'display:inline-block; padding:3px 9px; border-radius:9999px; font-size:11.5px; font-weight:700; background:#FEF3C7; color:#92400E; border:1px solid #FDE68A; cursor:pointer;'
+            : 'display:inline-block; padding:3px 9px; border-radius:9999px; font-size:11.5px; color:#785A5E; border:1px dashed #DFC2C5; cursor:pointer;';
+          noteBtn.textContent = noteVal ? `🏷 ${noteVal}` : '+ Ghi chú';
+          noteBtn.title = 'Nhấn để sửa ghi chú';
+          noteBtn.addEventListener('click', () => editAdminNote(t.code, noteVal));
+          noteTd.appendChild(noteBtn);
+          tr.appendChild(noteTd);
+
           const actionTd = document.createElement('td');
           if (isChecked) {
             const undoBtn = document.createElement('button');
@@ -664,7 +677,27 @@
           tbody.appendChild(tr);
         }
       } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px; color:#f87171;">Lỗi tải dữ liệu vé</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px; color:#f87171;">Lỗi tải dữ liệu vé</td></tr>';
+      }
+    }
+
+    async function editAdminNote(code, currentNote) {
+      const newNote = prompt(`Nhập ghi chú cho vé ${code} (để trống để xóa):`, currentNote || '');
+      if (newNote === null) return;
+      try {
+        const res = await fetch(`/api/tickets/${encodeURIComponent(code)}/note`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ note: newNote.trim() })
+        });
+        const data = await res.json();
+        if (data.success || data.status === 'OK') {
+          loadDashboard();
+        } else {
+          alert(data.message || 'Không thể cập nhật ghi chú');
+        }
+      } catch (err) {
+        alert('Lỗi kết nối máy chủ');
       }
     }
 

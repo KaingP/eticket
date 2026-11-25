@@ -228,10 +228,10 @@
 
     /* Container chính */
     .container {
-      max-width: 1280px;
+      max-width: 1320px;
       width: 100%;
       margin: 0 auto;
-      padding: 24px 32px 60px;
+      padding: 24px 24px 60px;
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -427,7 +427,7 @@
       background: var(--table-th-bg);
       color: #FFFFFF;
       font-weight: 700;
-      padding: 14px 12px;
+      padding: 13px 10px;
       border-bottom: 1px solid #961623;
       border-right: 1px solid rgba(255, 255, 255, 0.22);
       font-size: 13.5px;
@@ -437,7 +437,7 @@
       border-right: none;
     }
     td {
-      padding: 11px 12px;
+      padding: 10px 10px;
       border-bottom: 1px solid var(--table-td-border);
       border-right: 1px solid var(--table-col-border);
       color: var(--text);
@@ -517,6 +517,81 @@
     .status-caret {
       font-size: 9px;
       opacity: 0.75;
+    }
+
+    /* Pill Ghi chú trên bảng & trong modal */
+    .cell-note {
+      max-width: 190px;
+      white-space: normal;
+      line-height: 1.35;
+    }
+    .note-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid #F2D2D6;
+      background: #FDF2F4;
+      color: #8C1D29;
+      max-width: 175px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .note-pill:hover {
+      border-color: var(--primary);
+      background: #FCE5E8;
+    }
+    .note-pill.note-highlight {
+      background: #FEF3C7;
+      border-color: #F59E0B;
+      color: #92400E;
+    }
+    .note-pill.note-highlight:hover {
+      background: #FDE68A;
+    }
+    .note-add-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: transparent;
+      border: 1px dashed #DFC2C5;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .note-add-btn:hover {
+      color: var(--primary);
+      border-color: var(--primary);
+      background: #FFF6F7;
+    }
+    .note-preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .note-preset-chip {
+      padding: 5px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #FEF3C7;
+      color: #92400E;
+      border: 1px solid #FDE68A;
+      cursor: pointer;
+    }
+    .note-preset-chip:hover {
+      background: #FDE68A;
     }
 
     /* Phân trang (Diagram 0: < 1 2 3 ... >) */
@@ -1172,7 +1247,7 @@
         <table>
           <thead>
             <tr>
-              <th style="width: 48px;"></th>
+              <th style="width: 54px;"></th>
               <th>Tên khách hàng</th>
               <th>Email</th>
               <th>Thời điểm mua vé</th>
@@ -1180,11 +1255,12 @@
               <th>Số lượng vé</th>
               <th>Trạng thái</th>
               <th>Thời điểm check in</th>
+              <th>Ghi chú</th>
             </tr>
           </thead>
           <tbody id="tickets-table-body">
             <tr>
-              <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">Đang tải dữ liệu...</td>
+              <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-muted);">Đang tải dữ liệu...</td>
             </tr>
           </tbody>
         </table>
@@ -1261,6 +1337,32 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeTicketModal()">Đóng bảng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SỬA GHI CHÚ VÉ -->
+  <div class="modal-backdrop" id="note-modal" style="z-index: 2100;">
+    <div class="modal-box" style="max-width: 440px;">
+      <div class="modal-header">
+        <h2>Ghi chú vé <span id="note-modal-code" style="font-family: monospace;"></span></h2>
+        <button class="btn btn-secondary btn-icon" onclick="closeNoteModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <label for="note-modal-input" style="display:block; font-size:13px; font-weight:600; color:#4A2327; margin-bottom:8px;">Nội dung ghi chú (hiển thị ngay trên bảng &amp; màn hình quét QR):</label>
+        <input type="text" id="note-modal-input" class="search-input" style="padding: 10px 14px; min-height: 44px;" placeholder="Ví dụ: voucher nước, quà tặng áo, khách VIP..." onkeydown="if (event.key === 'Enter') saveNoteModal();">
+        <div class="note-preset-row">
+          <button type="button" class="note-preset-chip" onclick="applyNotePreset('voucher nước')">+ voucher nước</button>
+          <button type="button" class="note-preset-chip" onclick="applyNotePreset('quà tặng áo')">+ quà tặng áo</button>
+          <button type="button" class="note-preset-chip" onclick="applyNotePreset('khách VIP')">+ khách VIP</button>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn btn-secondary" onclick="clearNoteModalInput()" style="color:#B91C1C;">Xóa ghi chú</button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-secondary" onclick="closeNoteModal()">Hủy</button>
+          <button type="button" class="btn btn-primary" id="btn-save-note" onclick="saveNoteModal()">Lưu</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1512,7 +1614,7 @@
       if (!tickets || tickets.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="8" style="text-align: center; padding: 36px; color: var(--text-muted);">
+            <td colspan="9" style="text-align: center; padding: 36px; color: var(--text-muted);">
               ${currentSearch ? 'Không tìm thấy vé nào khớp với "' + escapeHtml(currentSearch) + '"' : 'Chưa có dữ liệu vé'}
             </td>
           </tr>
@@ -1556,6 +1658,28 @@
           checkedAtCell.style.cssText = 'color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;';
           checkedAtCell.textContent = isChecked ? formatTime(t.checkedAt) : '';
           tr.appendChild(checkedAtCell);
+
+          const noteCell = document.createElement('td');
+          noteCell.className = 'cell-note';
+          if (t.note) {
+            const noteBadge = document.createElement('button');
+            noteBadge.type = 'button';
+            const isHighlight = /voucher|quà|qua|vip/i.test(t.note);
+            noteBadge.className = `note-pill ${isHighlight ? 'note-highlight' : ''}`;
+            noteBadge.title = `Ghi chú: ${t.note} (Nhấn để sửa)`;
+            noteBadge.textContent = `🏷 ${t.note}`;
+            noteBadge.addEventListener('click', () => editTicketNote(t.code, t.note));
+            noteCell.appendChild(noteBadge);
+          } else {
+            const addNoteBtn = document.createElement('button');
+            addNoteBtn.type = 'button';
+            addNoteBtn.className = 'note-add-btn';
+            addNoteBtn.title = 'Thêm ghi chú cho vé này';
+            addNoteBtn.textContent = '+ Ghi chú';
+            addNoteBtn.addEventListener('click', () => editTicketNote(t.code, ''));
+            noteCell.appendChild(addNoteBtn);
+          }
+          tr.appendChild(noteCell);
 
           tbody.appendChild(tr);
         });
@@ -1715,7 +1839,12 @@
         }
         
         document.getElementById('m-checked-at').innerText = isChecked ? formatTime(t.checkedAt) : 'Chưa check-in';
-        document.getElementById('m-note').innerText = t.note || 'Không có';
+        const modalNoteEl = document.getElementById('m-note');
+        if (t.note) {
+          modalNoteEl.innerHTML = `<span class="note-pill note-highlight" style="cursor:default;">🏷 ${escapeHtml(t.note)}</span>`;
+        } else {
+          modalNoteEl.innerText = 'Không có';
+        }
 
         document.getElementById('ticket-modal').style.display = 'flex';
       } catch (err) {
@@ -1723,35 +1852,89 @@
       }
     }
 
+    let editingNoteTicketCode = null;
+
     async function promptEditCurrentModalNote() {
       if (!currentDetailTicketCode) return;
-      await editTicketNote(currentDetailTicketCode, currentDetailTicketNote);
+      editTicketNote(currentDetailTicketCode, currentDetailTicketNote);
     }
 
-    async function editTicketNote(code, currentNote) {
-      const newNote = prompt(`Nhập ghi chú cho mã vé ${code} (để trống để xóa):`, currentNote || '');
-      if (newNote === null) return;
+    function editTicketNote(code, currentNote) {
+      editingNoteTicketCode = code;
+      document.getElementById('note-modal-code').innerText = code;
+      const input = document.getElementById('note-modal-input');
+      input.value = currentNote || '';
+      document.getElementById('note-modal').style.display = 'flex';
+      setTimeout(() => input.focus(), 50);
+    }
+
+    function applyNotePreset(presetText) {
+      const input = document.getElementById('note-modal-input');
+      if (!input) return;
+      const cur = input.value.trim();
+      if (!cur) {
+        input.value = presetText;
+      } else if (!cur.toLowerCase().includes(presetText.toLowerCase())) {
+        input.value = `${cur}, ${presetText}`;
+      }
+      input.focus();
+    }
+
+    function clearNoteModalInput() {
+      const input = document.getElementById('note-modal-input');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    function closeNoteModal() {
+      document.getElementById('note-modal').style.display = 'none';
+      editingNoteTicketCode = null;
+    }
+
+    async function saveNoteModal() {
+      if (!editingNoteTicketCode) return;
+      const code = editingNoteTicketCode;
+      const newNote = document.getElementById('note-modal-input').value.trim();
+      const saveBtn = document.getElementById('btn-save-note');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerText = 'Đang lưu...';
+      }
 
       try {
         const res = await fetch(`/api/tickets/${encodeURIComponent(code)}/note`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ note: newNote.trim() })
+          body: JSON.stringify({ note: newNote })
         });
         const data = await res.json();
         if (data.success || data.status === 'OK') {
-          showToast('Đã cập nhật ghi chú');
-          currentDetailTicketNote = newNote.trim();
-          const modalNoteEl = document.getElementById('m-note');
-          if (modalNoteEl) {
-            modalNoteEl.innerText = currentDetailTicketNote || 'Không có';
+          showToast(newNote ? `Đã lưu ghi chú: ${newNote}` : 'Đã xóa ghi chú');
+          if (currentDetailTicketCode === code) {
+            currentDetailTicketNote = newNote;
+            const modalNoteEl = document.getElementById('m-note');
+            if (modalNoteEl) {
+              if (newNote) {
+                modalNoteEl.innerHTML = `<span class="note-pill note-highlight" style="cursor:default;">🏷 ${escapeHtml(newNote)}</span>`;
+              } else {
+                modalNoteEl.innerText = 'Không có';
+              }
+            }
           }
+          closeNoteModal();
           loadTickets();
         } else {
           alert('Lỗi: ' + (data.message || 'Không thể cập nhật ghi chú'));
         }
       } catch (err) {
         alert('Lỗi kết nối máy chủ');
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerText = 'Lưu';
+        }
       }
     }
 
@@ -1928,6 +2111,8 @@
       const refit = () => fitScannerVideoCover(video);
       video.addEventListener('loadedmetadata', refit);
       video.addEventListener('loadeddata', refit);
+      video.addEventListener('canplay', refit);
+      video.addEventListener('playing', refit);
       video.addEventListener('resize', refit);
       if (video.videoWidth && video.videoHeight) {
         fitScannerVideoCover(video);
@@ -2345,8 +2530,13 @@
 
           card.className = 'invalid';
           title.innerText = 'Không hợp lệ';
-          noteBadge.style.display = 'none';
           info.innerText = data.message || 'Mã vé không tồn tại hoặc đã được sử dụng';
+          if (data.note) {
+            noteBadge.innerText = `Ghi chú: ${data.note}`;
+            noteBadge.style.display = 'inline-block';
+          } else {
+            noteBadge.style.display = 'none';
+          }
         }
 
         // Hiển thị kết quả kèm popup "Quét mã tiếp theo?"
