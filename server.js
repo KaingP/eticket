@@ -454,7 +454,7 @@ app.get('/api/tickets', (req, res) => {
     const status = req.query.status || 'all'; // 'all', 'checked', 'unchecked'
     const search = (req.query.search || '').trim();
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
-    const limit = Math.min(Math.max(1, parseInt(req.query.limit || '8', 10)), 100);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit || '20', 10)), 100);
     const offset = (page - 1) * limit;
 
     let whereClauses = [];

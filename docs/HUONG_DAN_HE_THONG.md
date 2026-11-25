@@ -160,7 +160,7 @@ Trình duyệt di động (đặc biệt là Safari iOS và Chrome Android) **b�
   - Bấm dấu `✕` bên phải ô tìm kiếm để quay về danh sách đầy đủ.
 
 ### 4.2. Bảng danh sách vé & Thao tác trên từng vé
-Bảng hiển thị phân trang mỗi **8 vé/trang** với **8 cột**:
+Bảng hiển thị phân trang mỗi **20 vé/trang** với **8 cột**:
 `STT | Tên khách hàng | Email | Thời điểm mua vé | Mã vé | Số lượng vé | Trạng thái | Thời điểm check in`
 
 1. **Xem chi tiết vé & Ghi chú (Note):**
@@ -259,7 +259,7 @@ Các khóa hỗ trợ trên mỗi phần tử: `ticketCode`/`code`, `customerNam
 | `POST` | `/api/scan` | Công khai LAN | Quét check-in nguyên tử `{ code, gate }`. Trả về `OK`, `DUPLICATE`, `INVALID`, `NOT_VALID_STATUS`. |
 | `POST` | `/api/manual-checkin` | Công khai LAN | Đổi trạng thái thủ công `{ code, gate, toggle }`. |
 | `GET` | `/api/stats` | Công khai LAN | Thống kê `all`, `checked`, `unchecked`, `total`, `remaining`, `by_gate`, `recent_scans`. |
-| `GET` | `/api/tickets` | Công khai LAN | Phân trang & lọc danh sách (`?status=all\|checked\|unchecked&search=&page=1&limit=8`). |
+| `GET` | `/api/tickets` | Công khai LAN | Phân trang & lọc danh sách (`?status=all\|checked\|unchecked&search=&page=1&limit=20`). |
 | `GET` | `/api/tickets/:code` | Công khai LAN | Chi tiết 1 mã vé kèm `paymentInfo` và `note`. |
 | `POST` | `/api/tickets/:code/note` | Công khai LAN | Cập nhật ghi chú `{ note }`. |
 | `POST` | `/api/import` | Công khai LAN | Nhập danh sách vé `{ filename, content }`. |
