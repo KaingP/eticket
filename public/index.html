@@ -228,10 +228,10 @@
 
     /* Container chính */
     .container {
-      max-width: 1180px;
+      max-width: 1280px;
       width: 100%;
       margin: 0 auto;
-      padding: 28px 24px 60px;
+      padding: 24px 32px 60px;
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -405,7 +405,7 @@
     .table-card {
       background: var(--card-bg);
       border: 1px solid #ECD4D7;
-      border-radius: 12px;
+      border-radius: 14px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -420,24 +420,24 @@
       width: 100%;
       border-collapse: collapse;
       text-align: center;
-      font-size: 13px;
+      font-size: 13.5px;
       white-space: nowrap;
     }
     th {
       background: var(--table-th-bg);
       color: #FFFFFF;
-      font-weight: 600;
+      font-weight: 700;
       padding: 14px 12px;
       border-bottom: 1px solid #961623;
-      border-right: 1px solid rgba(255, 255, 255, 0.14);
-      font-size: 13px;
+      border-right: 1px solid rgba(255, 255, 255, 0.22);
+      font-size: 13.5px;
       text-align: center;
     }
     th:last-child {
       border-right: none;
     }
     td {
-      padding: 13px 12px;
+      padding: 11px 12px;
       border-bottom: 1px solid var(--table-td-border);
       border-right: 1px solid var(--table-col-border);
       color: var(--text);
@@ -456,8 +456,13 @@
     }
     .cell-stt {
       color: var(--primary);
-      font-weight: 700;
-      width: 48px;
+      font-weight: 800;
+      width: 54px;
+    }
+    .col-name {
+      font-weight: 600;
+      text-align: left;
+      padding-left: 16px;
     }
     .ticket-code-link {
       color: var(--primary);
@@ -482,16 +487,16 @@
     .badge-status {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 6px 14px;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 5px 12px;
       border-radius: 9999px;
       font-size: 12.5px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
       user-select: none;
       transition: all 0.15s;
-      min-height: 34px;
+      min-height: 30px;
       min-width: 112px;
       border: 1px solid transparent;
     }
@@ -1535,7 +1540,7 @@
 
           tr.innerHTML = `
             <td class="cell-stt">${t.stt}</td>
-            <td style="font-weight: 500;">${escapeHtml(t.name || 'Khách hàng')}</td>
+            <td class="col-name">${escapeHtml(t.name || 'Khách hàng')}</td>
             <td style="color: var(--text-muted);">${escapeHtml(t.email || '-')}</td>
             <td>${formatTime(t.issuedAt) || '-'}</td>
           `;
