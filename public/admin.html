@@ -493,6 +493,16 @@
   <script>
     let adminPin = sessionStorage.getItem('soatve_admin_pin') || '';
 
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     // Modal PIN
     const pinModal = document.getElementById('pin-modal');
     const pinField = document.getElementById('admin-pin-field');
@@ -547,8 +557,8 @@
             const item = document.createElement('div');
             item.className = 'gate-item';
             item.innerHTML = `
-              <span class="gate-name">${gateName}</span>
-              <span class="gate-count">${count} vé</span>
+              <span class="gate-name">${escapeHtml(gateName)}</span>
+              <span class="gate-count">${Number(count) || 0} vé</span>
             `;
             gateContainer.appendChild(item);
           }
@@ -567,11 +577,11 @@
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${timeStr}</td>
-            <td style="font-family:monospace; font-weight:700; color:#AF1C2B;">${log.code}</td>
-            <td>${log.name || '---'}</td>
-            <td>${log.gate || '---'}</td>
-            <td><span class="badge ${badgeClass}">${log.result}</span></td>
+            <td>${escapeHtml(timeStr)}</td>
+            <td style="font-family:monospace; font-weight:700; color:#AF1C2B;">${escapeHtml(log.code)}</td>
+            <td>${escapeHtml(log.name || '---')}</td>
+            <td>${escapeHtml(log.gate || '---')}</td>
+            <td><span class="badge ${badgeClass}">${escapeHtml(log.result)}</span></td>
           `;
           recentTbody.appendChild(tr);
         }
@@ -619,7 +629,7 @@
 
           let statusBadge = '<span class="badge badge-ok">HỢP LỆ</span>';
           if (t.status !== 'VALID') {
-            statusBadge = `<span class="badge badge-err">${t.status}</span>`;
+            statusBadge = `<span class="badge badge-err">${escapeHtml(t.status)}</span>`;
           }
 
           let checkinBadge = isChecked
@@ -630,19 +640,19 @@
 
           let actionBtn = '---';
           if (isChecked) {
-            actionBtn = `<button class="btn btn-danger" style="padding:4px 8px; font-size:11px; min-height:28px;" onclick="undoTicket('${t.code}')">Hoàn tác</button>`;
+            actionBtn = `<button class="btn btn-danger" style="padding:4px 8px; font-size:11px; min-height:28px;" onclick="undoTicket('${escapeHtml(t.code)}')">Hoàn tác</button>`;
           }
 
           tr.innerHTML = `
-            <td style="font-family:monospace; font-weight:700; color:#AF1C2B;">${t.code}</td>
-            <td style="font-weight:600;">${t.name || ''}</td>
-            <td>${t.phone || ''}</td>
-            <td style="font-family:monospace;">${t.order_id || ''}</td>
-            <td>${t.label || ''}</td>
-            <td>${t.type || ''}</td>
+            <td style="font-family:monospace; font-weight:700; color:#AF1C2B;">${escapeHtml(t.code)}</td>
+            <td style="font-weight:600;">${escapeHtml(t.name || '')}</td>
+            <td>${escapeHtml(t.phone || '')}</td>
+            <td style="font-family:monospace;">${escapeHtml(t.order_id || '')}</td>
+            <td>${escapeHtml(t.label || '')}</td>
+            <td>${escapeHtml(t.type || '')}</td>
             <td>${statusBadge} ${checkinBadge}</td>
-            <td>${t.gate || '---'}</td>
-            <td style="font-size:12px;">${timeStr}</td>
+            <td>${escapeHtml(t.gate || '---')}</td>
+            <td style="font-size:12px;">${escapeHtml(timeStr)}</td>
             <td>${actionBtn}</td>
           `;
           tbody.appendChild(tr);

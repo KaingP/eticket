@@ -12,6 +12,7 @@ const http = require('http');
 const os = require('os');
 const { spawn } = require('child_process');
 const express = require('express');
+const QRCode = require('qrcode');
 
 const PROJECT_DIR = fs.existsSync(path.join(__dirname, 'server.js')) ? path.resolve(__dirname) : path.resolve(__dirname, '..');
 const INDEX_HTML_PATH = path.join(PROJECT_DIR, 'public', 'index.html');
@@ -243,6 +244,23 @@ async function runTier2CDP(binPath) {
       res.json({ status: 'OK', message: 'Cập nhật thành công' });
     });
 
+    app.post('/api/scan', (req, res) => {
+      const code = ((req.body && req.body.code) || '').trim().toUpperCase();
+      if (code === 'HVC-K4YGBF-70EB') {
+        res.json({
+          status: 'OK',
+          valid: true,
+          code,
+          name: 'Nguyễn Hoàng Bảo Thy',
+          label: 'Vé 1/1',
+          note: 'voucher nước',
+          message: 'Thành công!'
+        });
+      } else {
+        res.json({ status: 'INVALID', valid: false, code, message: 'Mã vé không tồn tại' });
+      }
+    });
+
     serverInstance = await new Promise((resolve) => {
       const s = app.listen(0, '127.0.0.1', () => resolve(s));
     });
@@ -396,6 +414,17 @@ async function runTier2CDP(binPath) {
     fs.writeFileSync(path.join(SCREENSHOT_DIR, 'ui_mobile.png'), Buffer.from(mobileShot.data, 'base64'));
     assert(fs.existsSync(path.join(SCREENSHOT_DIR, 'ui_mobile.png')),
       'Đã xuất ảnh chụp giao diện Mobile: data/screenshots/ui_mobile.png');
+
+    // Kiểm tra nút Tải lại trên Mobile
+    const reloadOk = await evalJs(`(async () => {
+      const btn = document.getElementById('btn-reload');
+      if (!btn) return false;
+      btn.click();
+      await new Promise(r => setTimeout(r, 150));
+      const toast = document.getElementById('toast');
+      return btn.innerText.includes('Tải lại') && toast && toast.style.display === 'block';
+    })()`);
+    assert(reloadOk, 'Nút "Tải lại" hoạt động mượt mà và hiển thị thông báo cập nhật');
     console.log('👉 Test U9: HOÀN THÀNH XUẤT SẮC');
 
     // [TEST U10] Modal Interactive Opening, Fitting, and Closing on Mobile
@@ -437,6 +466,192 @@ async function runTier2CDP(binPath) {
     const isModalClosed = await evalJs("document.getElementById('ticket-modal').style.display === 'none'");
     assert(isModalClosed, 'Modal đóng thành công khi nhấn nút đóng');
     console.log('👉 Test U10: HOÀN THÀNH XUẤT SẮC');
+
+    // [TEST U13] Kiểm thử Tốc độ Quét Camera QR & Tính năng Đèn Flash trên Mobile (375x667)
+    console.log('\n[TEST U13] Kiểm tra Tốc độ Quét Camera QR & Đèn Flash (CDP Real Canvas Stream)...');
+    const qrTestDataUrl = await QRCode.toDataURL('HVC-K4YGBF-70EB', { width: 220, margin: 2 });
+    const scannerPerf = await evalJs(`(async () => {
+      const qrImg = new Image();
+      qrImg.src = ${JSON.stringify(qrTestDataUrl)};
+      await new Promise((r) => { qrImg.onload = r; });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 480;
+      const ctx = canvas.getContext('2d');
+      let showQr = false;
+      const drawLoop = () => {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, 640, 480);
+        if (showQr) {
+          ctx.drawImage(qrImg, 320 - 110, 240 - 110, 220, 220);
+        }
+      };
+      drawLoop();
+      if (window.__testFrameTimer) clearInterval(window.__testFrameTimer);
+      window.__testFrameTimer = setInterval(drawLoop, 33);
+      const stream = canvas.captureStream(30);
+      const track = stream.getVideoTracks()[0];
+
+      const torchCalls = [];
+      track.getCapabilities = () => ({ torch: true, focusMode: ['continuous'], deviceId: 'cam-back' });
+      track.getSettings = () => ({ deviceId: 'cam-back', width: 640, height: 480 });
+      track.applyConstraints = async (c) => { torchCalls.push(c); };
+
+      if (!navigator.mediaDevices) navigator.mediaDevices = {};
+      navigator.mediaDevices.getUserMedia = async () => stream;
+      navigator.mediaDevices.enumerateDevices = async () => [
+        { kind: 'videoinput', deviceId: 'cam-back', label: 'Back Camera' },
+        { kind: 'videoinput', deviceId: 'cam-front', label: 'Front Camera' }
+      ];
+
+      document.getElementById('btn-open-scanner').click();
+
+      // Chờ camera khởi động & kiểm tra nút Flash + Đổi Cam xuất hiện
+      for (let i = 0; i < 40; i++) {
+        if (isCameraScanning && document.getElementById('btn-torch').style.display !== 'none') break;
+        await new Promise(r => setTimeout(r, 50));
+      }
+
+      const torchBtn = document.getElementById('btn-torch');
+      const torchVisible = window.getComputedStyle(torchBtn).display !== 'none';
+      const switchVisible = window.getComputedStyle(document.getElementById('btn-switch-cam')).display !== 'none';
+
+      // Bật Flash rồi kiểm tra trạng thái
+      await toggleTorch();
+      const torchOnAfterFirstClick = isTorchOn && torchBtn.classList.contains('torch-active');
+
+      // Tắt Flash rồi kiểm tra
+      await toggleTorch();
+      const torchOffAfterSecondClick = !isTorchOn && !torchBtn.classList.contains('torch-active');
+
+      // Bật Flash lại để test tự động tắt khi đóng scanner
+      await toggleTorch();
+
+      const vid = document.querySelector('#camera-reader video');
+      const ratioX = vid ? vid.videoWidth / vid.clientWidth : 0;
+      const ratioY = vid ? vid.videoHeight / vid.clientHeight : 0;
+      const aspectDiff = Math.abs(ratioX - ratioY);
+
+      // Bắt đầu hiển thị QR code trên camera & đo thời gian giải mã -> Thành công!
+      showQr = true;
+      const scanStart = performance.now();
+      for (let i = 0; i < 60; i++) {
+        if (document.getElementById('scan-result-card').style.display === 'flex') break;
+        await new Promise(r => setTimeout(r, 25));
+      }
+      const scanMs = Math.round(performance.now() - scanStart);
+
+      // Đợi animation slideUp (200ms) hoàn tất để kiểm tra khung nút nằm trọn trong viewport
+      await new Promise(r => setTimeout(r, 260));
+      const resTitle = document.getElementById('scan-res-title').innerText;
+      const resInfo = document.getElementById('scan-res-info').innerText;
+      const resNote = document.getElementById('scan-res-note').innerText;
+      const popupButtons = Array.from(document.querySelectorAll('#scan-next-popup button')).map(b => {
+        const r = b.getBoundingClientRect();
+        return { text: b.innerText, top: r.top, bottom: r.bottom, height: r.height };
+      });
+
+      return {
+        isCameraScanning,
+        torchVisible,
+        switchVisible,
+        torchOnAfterFirstClick,
+        torchOffAfterSecondClick,
+        aspectDiff,
+        scanMs,
+        resTitle,
+        resInfo,
+        resNote,
+        popupButtons,
+        windowHeight: window.innerHeight,
+        torchCalls
+      };
+    })()`);
+
+    const scannerShot = await sendCdp('Page.captureScreenshot', { format: 'png' });
+    fs.writeFileSync(path.join(SCREENSHOT_DIR, 'ui_mobile_scanner.png'), Buffer.from(scannerShot.data, 'base64'));
+
+    await evalJs('closeScanner(); if (window.__testFrameTimer) { clearInterval(window.__testFrameTimer); window.__testFrameTimer = null; }');
+    await new Promise(r => setTimeout(r, 200));
+    const afterCloseState = await evalJs(`(() => ({
+      overlayDisplay: document.getElementById('scanner-overlay').style.display,
+      isTorchOn,
+      isCameraScanning
+    }))()`);
+
+    assert(scannerPerf.isCameraScanning === true, 'Camera scanner khởi động thành công trên mobile 375x667');
+    assert(scannerPerf.torchVisible === true, 'Nút ⚡ Flash hiển thị đúng khi thiết bị hỗ trợ Torch');
+    assert(scannerPerf.switchVisible === true, 'Nút 🔄 Đổi Cam hiển thị đúng khi thiết bị có >= 2 camera');
+    assert(scannerPerf.torchOnAfterFirstClick === true, 'Bật Flash kích hoạt trạng thái sáng (torch-active) và gọi applyConstraints');
+    assert(scannerPerf.torchOffAfterSecondClick === true, 'Nhấn lại nút Flash tắt đèn chính xác');
+    assert(scannerPerf.aspectDiff < 0.05, `Video giữ đúng tỉ lệ cảm biến chống méo QR (chênh lệch o/s = ${scannerPerf.aspectDiff.toFixed(4)})`);
+    assert(scannerPerf.resTitle === 'Thành công!' && scannerPerf.resInfo.includes('HVC-K4YGBF-70EB'),
+      `Quét thành công mã QR thực tế từ camera stream trong ${scannerPerf.scanMs}ms: "${scannerPerf.resTitle}" (${scannerPerf.resNote})`);
+    assert(scannerPerf.scanMs < 1500, `Tốc độ nhận diện & check-in QR đạt chuẩn siêu nhanh (${scannerPerf.scanMs}ms < 1500ms)`);
+    assert(scannerPerf.popupButtons.length === 2 && scannerPerf.popupButtons.every(b => b.top >= 0 && b.bottom <= scannerPerf.windowHeight),
+      `Hai nút "Xác nhận" & "Thoát" trong popup kết quả nằm trọn vẹn trong viewport mobile (${scannerPerf.windowHeight}px)`);
+    assert(afterCloseState.overlayDisplay === 'none' && !afterCloseState.isTorchOn && !afterCloseState.isCameraScanning,
+      'Đóng scanner tự động tắt đèn Flash và giải phóng luồng camera an toàn');
+
+    // Kiểm tra thêm luồng camera HD 1280x720 (không zoom-in quá khổ) & xử lý thiết bị không hỗ trợ Torch (vd: iPhone Safari)
+    const hdAndFallbackPerf = await evalJs(`(async () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1280;
+      canvas.height = 720;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(0, 0, 1280, 720);
+      const hdStream = canvas.captureStream(15);
+      const hdTrack = hdStream.getVideoTracks()[0];
+      hdTrack.getCapabilities = () => ({ deviceId: 'ios-back' }); // Không có torch capability (mô phỏng iOS Safari)
+      hdTrack.getSettings = () => ({ deviceId: 'ios-back', width: 1280, height: 720 });
+      hdTrack.applyConstraints = async (c) => {
+        if (c && c.torch && typeof c.torch === 'object' && 'exact' in c.torch) {
+          throw new DOMException('Overconstrained', 'OverconstrainedError');
+        }
+        // Mô phỏng W3C advanced silent no-op khi không hỗ trợ torch
+        return;
+      };
+
+      navigator.mediaDevices.getUserMedia = async () => hdStream;
+      navigator.mediaDevices.enumerateDevices = async () => [{ kind: 'videoinput', deviceId: 'ios-back', label: 'Back Camera' }];
+
+      document.getElementById('btn-open-scanner').click();
+      for (let i = 0; i < 40; i++) {
+        if (isCameraScanning && document.querySelector('#camera-reader video')?.videoWidth === 1280) break;
+        await new Promise(r => setTimeout(r, 50));
+      }
+      await new Promise(r => setTimeout(r, 100));
+
+      const vid = document.querySelector('#camera-reader video');
+      const box = document.getElementById('camera-reader');
+      const ratioX = vid ? vid.videoWidth / vid.clientWidth : 0;
+      const ratioY = vid ? vid.videoHeight / vid.clientHeight : 0;
+      const aspectDiff = Math.abs(ratioX - ratioY);
+
+      // Thử bật Flash khi camera không hỗ trợ torch: không được báo sai sang trạng thái bật
+      await toggleTorch();
+      const torchRemainedOff = !isTorchOn && !document.getElementById('btn-torch').classList.contains('torch-active');
+
+      const out = {
+        aspectDiff,
+        vidW: vid ? vid.clientWidth : 0,
+        vidH: vid ? vid.clientHeight : 0,
+        boxH: box ? box.clientHeight : 0,
+        torchRemainedOff
+      };
+      await closeScanner();
+      return out;
+    })()`);
+
+    assert(hdAndFallbackPerf.aspectDiff < 0.05,
+      `Camera HD 1280x720 giữ nguyên tỉ lệ gốc không méo QR (o/s diff = ${hdAndFallbackPerf.aspectDiff.toFixed(4)})`);
+    assert(hdAndFallbackPerf.vidH <= hdAndFallbackPerf.boxH + 2,
+      `Camera HD 1280x720 co giãn vừa khung (${hdAndFallbackPerf.vidW}x${hdAndFallbackPerf.vidH}px, boxH=${hdAndFallbackPerf.boxH}px) không bị phóng to mất khung hình`);
+    assert(hdAndFallbackPerf.torchRemainedOff === true,
+      'Khi trình duyệt không hỗ trợ Torch thật (silent no-op), nút Flash không bật sáng giả');
+    console.log('👉 Test U13: HOÀN THÀNH XUẤT SẮC');
 
     // [TEST U11] Kiểm tra các trang phụ (Admin & Test QR)
     console.log('\n[TEST U11] Kiểm tra đồng bộ giao diện trên trang Quản trị (admin.html) & Trang QR (test-qr.html)...');

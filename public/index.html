@@ -709,8 +709,8 @@
       display: none;
       flex-direction: column;
       z-index: 3000;
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
     }
     .scanner-header {
       background: var(--scanner-header-bg);
@@ -739,18 +739,31 @@
     #camera-reader {
       width: 100% !important;
       height: 100% !important;
+      position: relative;
+      overflow: hidden;
+      background: #000;
     }
     #camera-reader video {
-      object-fit: cover !important;
-      width: 100% !important;
-      height: 100% !important;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      min-width: 100%;
+      min-height: 100%;
+      width: auto !important;
+      height: auto !important;
+      max-width: none !important;
+      max-height: none !important;
+    }
+    #qr-shaded-region {
+      display: none !important;
     }
     /* Khung ngắm quét */
     .scan-target-box {
       position: absolute;
-      width: 250px;
-      height: 250px;
-      border: 2px solid rgba(255, 255, 255, 0.9);
+      width: min(250px, 68vw, 52vh);
+      height: min(250px, 68vw, 52vh);
+      border: 2px solid rgba(255, 255, 255, 0.92);
       border-radius: 16px;
       pointer-events: none;
       box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.45);
@@ -761,8 +774,23 @@
       position: absolute;
       top: 0; left: 0; right: 0; height: 3px;
       background: #F43F5E;
-      animation: scanSweep 2s infinite ease-in-out;
+      animation: scanSweep 1.6s infinite ease-in-out;
       box-shadow: 0 0 10px #F43F5E;
+    }
+    .scan-hint-text {
+      position: absolute;
+      top: calc(50% + min(125px, 34vw, 26vh) + 12px);
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255, 255, 255, 0.92);
+      background: rgba(0, 0, 0, 0.55);
+      padding: 5px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 6;
     }
     @keyframes scanSweep {
       0%, 100% { top: 0; }
@@ -778,16 +806,16 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 12px;
-      padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0px));
+      gap: 10px;
+      padding: 14px 12px calc(18px + env(safe-area-inset-bottom, 0px));
       background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 60%, transparent 100%);
       z-index: 15;
     }
     .btn-scanner-btn {
-      min-height: 48px;
-      min-width: 96px;
-      padding: 10px 20px;
-      font-size: 15px;
+      min-height: 46px;
+      min-width: 0;
+      padding: 10px 16px;
+      font-size: 14px;
       font-weight: 700;
       border-radius: 9999px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
@@ -795,12 +823,22 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
+      white-space: nowrap;
       background: #FFFFFF;
       color: #AF1C2B;
       border: 1px solid #F3D1D5;
     }
     .btn-scanner-btn:hover {
       background: #FCF1F2;
+    }
+    .btn-scanner-btn.torch-active {
+      background: #FACC15;
+      color: #422006;
+      border-color: #F59E0B;
+      box-shadow: 0 0 18px rgba(250, 204, 21, 0.75);
+    }
+    .btn-scanner-btn.torch-active:hover {
+      background: #FDE047;
     }
 
     /* Thông báo kết quả quét (Thành công! / Không hợp lệ) */
@@ -809,7 +847,9 @@
       bottom: 0;
       left: 0;
       right: 0;
-      padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+      max-height: 100%;
+      overflow-y: auto;
+      padding: 22px 20px calc(22px + env(safe-area-inset-bottom, 0px));
       border-radius: 20px 20px 0 0;
       color: #fff;
       display: none;
@@ -1242,10 +1282,11 @@
     <div class="scanner-camera-box">
       <div id="camera-reader"></div>
       <div class="scan-target-box"></div>
+      <div class="scan-hint-text">Đưa mã QR vào giữa khung</div>
 
       <!-- Thanh điều khiển ngón cái ở dưới màn hình (Thumb-zone) -->
       <div class="scanner-controls-bar">
-        <button class="btn btn-secondary btn-scanner-btn" id="btn-torch" onclick="toggleTorch()" title="Bật/Tắt đèn Flash" style="display: none;">⚡ Flash</button>
+        <button class="btn btn-secondary btn-scanner-btn" id="btn-torch" onclick="toggleTorch()" title="Bật/Tắt đèn Flash" aria-pressed="false" style="display: none;">⚡ Flash</button>
         <button class="btn btn-secondary btn-scanner-btn" id="btn-switch-cam" onclick="switchCamera()" title="Đổi camera" style="display: none;">🔄 Đổi Cam</button>
         <button class="btn btn-secondary btn-scanner-btn" onclick="closeScanner()" title="Thoát">✕ Thoát</button>
       </div>
@@ -1282,11 +1323,19 @@
 
     // Trình quét QR
     let html5QrCode = null;
+    let isScannerOpen = false;
     let isCameraScanning = false;
-    let isScanPaused = false; // "Tạm dừng Camera 1.5 giây (chống quét đúp)"
+    let isStartingCamera = false;
+    let isSwitchingCamera = false;
+    let isClosingScanner = false;
+    let isCurrentCameraFront = false;
+    let isScanPaused = false; // Chống quét đúp khi đang xử lý kết quả
     let isTorchOn = false;
     let availableCameras = [];
     let currentCameraIndex = 0;
+    let screenWakeLock = null;
+    let torchCheckTimer = null;
+    let scannerVideoObserver = null;
 
     // WebAudio
     let audioCtx = null;
@@ -1334,12 +1383,21 @@
     }
 
     // Hiển thị thông báo Toast
+    let toastTimer = null;
     function showToast(msg, isError = false) {
       const toast = document.getElementById('toast');
       toast.innerText = msg;
       toast.className = isError ? 'error' : 'success';
+      if (isScannerOpen) {
+        toast.style.top = '72px';
+        toast.style.bottom = 'auto';
+      } else {
+        toast.style.top = 'auto';
+        toast.style.bottom = '24px';
+      }
       toast.style.display = 'block';
-      setTimeout(() => {
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
         toast.style.display = 'none';
       }, 3000);
     }
@@ -1727,64 +1785,422 @@
     // 6. SOÁT VÉ - QUÉT MÃ QR (Diagram 1)
     // ==========================================
 
-    async function openScanner() {
-      getAudioContext(); // Kích hoạt WebAudio
+    const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const IS_TOUCH_MOBILE = IS_IOS || /Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    function openScanner() {
+      if (isClosingScanner) return;
+      getAudioContext(); // Kích hoạt WebAudio ngay trong user tap
+      isScannerOpen = true;
+      isCurrentCameraFront = false;
+      isSwitchingCamera = false;
+      const toast = document.getElementById('toast');
+      if (toast) toast.style.display = 'none';
       document.getElementById('scanner-overlay').style.display = 'flex';
       document.getElementById('scan-result-card').style.display = 'none';
       isScanPaused = false;
+      isTorchOn = false;
+      updateTorchUi(false);
+      attachScannerVideoObserver();
 
-      // Giữ màn hình luôn sáng nếu hỗ trợ
+      // Giữ màn hình sáng nền (không await để giữ nguyên user gesture cho getUserMedia trên Safari)
       if ('wakeLock' in navigator) {
-        try { await navigator.wakeLock.request('screen'); } catch (e) {}
+        navigator.wakeLock.request('screen')
+          .then((sentinel) => { screenWakeLock = sentinel; })
+          .catch(() => {});
       }
 
       startCamera();
     }
 
-    function startCamera() {
-      if (isCameraScanning) return;
+    function getQrFormat() {
+      if (typeof Html5QrcodeSupportedFormats !== 'undefined' && Html5QrcodeSupportedFormats.QR_CODE !== undefined) {
+        return Html5QrcodeSupportedFormats.QR_CODE;
+      }
+      if (window.__Html5QrcodeLibrary__ && window.__Html5QrcodeLibrary__.Html5QrcodeSupportedFormats) {
+        return window.__Html5QrcodeLibrary__.Html5QrcodeSupportedFormats.QR_CODE;
+      }
+      return 0; // QR_CODE
+    }
 
-      html5QrCode = new Html5Qrcode("camera-reader");
-      const config = {
-        fps: 15,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0
+    function createQrScannerInstance() {
+      // Chỉ giải mã định dạng QR_CODE (tăng tốc 3-5x so với quét tất cả 17 chuẩn mã vạch)
+      // Tắt native BarcodeDetector trên iOS Safari để tránh lỗi màn hình đen của WebKit
+      return new Html5Qrcode("camera-reader", {
+        formatsToSupport: [ getQrFormat() ],
+        verbose: false,
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: !IS_IOS
+        }
+      });
+    }
+
+    function fitScannerVideoCover(video) {
+      const reader = document.getElementById('camera-reader');
+      if (!reader || !video || !video.videoWidth || !video.videoHeight) return;
+      const cw = reader.clientWidth;
+      const ch = reader.clientHeight;
+      if (!cw || !ch) return;
+      const scale = Math.max(cw / video.videoWidth, ch / video.videoHeight);
+      const w = Math.round(video.videoWidth * scale * 100) / 100;
+      const h = Math.round(video.videoHeight * scale * 100) / 100;
+      video.style.setProperty('width', w + 'px', 'important');
+      video.style.setProperty('height', h + 'px', 'important');
+    }
+
+    function setupScannerVideoElement(video) {
+      if (!video || video.dataset.hvcBound === '1') return;
+      video.dataset.hvcBound = '1';
+      video.setAttribute('playsinline', 'true');
+      video.setAttribute('webkit-playsinline', 'true');
+      video.muted = true;
+      video.autoplay = true;
+      video.addEventListener('loadedmetadata', () => fitScannerVideoCover(video));
+      if (video.videoWidth && video.videoHeight) {
+        fitScannerVideoCover(video);
+      }
+    }
+
+    function attachScannerVideoObserver() {
+      detachScannerVideoObserver();
+      const reader = document.getElementById('camera-reader');
+      if (!reader || typeof MutationObserver === 'undefined') return;
+      const existing = reader.querySelector('video');
+      if (existing) setupScannerVideoElement(existing);
+      scannerVideoObserver = new MutationObserver(() => {
+        const vid = reader.querySelector('video');
+        if (vid) setupScannerVideoElement(vid);
+      });
+      scannerVideoObserver.observe(reader, { childList: true, subtree: true });
+    }
+
+    function detachScannerVideoObserver() {
+      if (scannerVideoObserver) {
+        try { scannerVideoObserver.disconnect(); } catch (e) {}
+        scannerVideoObserver = null;
+      }
+    }
+
+    function getScannerConfig(allowFlip = false) {
+      return {
+        fps: 30, // Tốc độ 30fps bắt mã QR ngay lập tức
+        disableFlip: !allowFlip, // Tắt bước lật ảnh dư thừa để nhân đôi tốc độ xử lý & tránh biến dạng canvas
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+          const box = document.getElementById('camera-reader');
+          const visibleMin = box
+            ? Math.min(box.clientWidth || viewfinderWidth, box.clientHeight || viewfinderHeight)
+            : Math.min(viewfinderWidth, viewfinderHeight);
+          const maxSafe = Math.max(150, Math.min(viewfinderWidth, viewfinderHeight) - 16);
+          const target = Math.max(150, Math.min(250, Math.floor(visibleMin * 0.72), maxSafe));
+          return { width: target, height: target };
+        }
       };
+    }
+
+    function startCamera() {
+      if (isCameraScanning || isStartingCamera) return;
+      isStartingCamera = true;
+      isCurrentCameraFront = false;
+
+      if (html5QrCode) {
+        try { html5QrCode.clear(); } catch (e) {}
+        html5QrCode = null;
+      }
+
+      attachScannerVideoObserver();
+      html5QrCode = createQrScannerInstance();
+      const config = getScannerConfig(false);
 
       html5QrCode.start(
         { facingMode: "environment" },
         config,
         onQrCodeScanned,
-        (errorMessage) => {
-          // Bỏ qua lỗi nhận diện khung hình trống
+        () => {}
+      ).then(async () => {
+        isStartingCamera = false;
+        if (!isScannerOpen) {
+          // Người dùng đã bấm thoát trong lúc camera đang khởi động
+          try { if (html5QrCode) { await html5QrCode.stop(); html5QrCode.clear(); } } catch (e) {}
+          html5QrCode = null;
+          isCameraScanning = false;
+          return;
         }
-      ).then(() => {
-        isCameraScanning = true;
+        onCameraStarted();
       }).catch((err) => {
-        alert('Lỗi truy cập Camera: Vui lòng cấp quyền Camera trên trình duyệt');
+        isStartingCamera = false;
+        try { if (html5QrCode) html5QrCode.clear(); } catch (e) {}
+        html5QrCode = null;
+        isCameraScanning = false;
+
+        if (!isScannerOpen) return;
+
+        let msg = 'Lỗi truy cập Camera: Vui lòng cấp quyền Camera trên trình duyệt';
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+          msg = 'Camera bắt buộc chạy trên kết nối HTTPS. Vui lòng dùng đường link HTTPS.';
+        } else if (err && (err.name === 'NotAllowedError' || String(err).includes('Permission') || String(err).includes('NotAllowed'))) {
+          msg = 'Trình duyệt chưa được cấp quyền Camera. Vui lòng bật quyền Camera trong cài đặt trình duyệt.';
+        }
+        alert(msg);
         closeScanner();
       });
     }
 
-    function switchCamera() {}
-    function toggleTorch() {}
+    function startCameraWithId(cameraId, isFrontCam = false) {
+      if (isCameraScanning || isStartingCamera || !isScannerOpen) return;
+      isStartingCamera = true;
+      isCurrentCameraFront = !!isFrontCam;
+
+      if (html5QrCode) {
+        try { html5QrCode.clear(); } catch (e) {}
+        html5QrCode = null;
+      }
+
+      attachScannerVideoObserver();
+      html5QrCode = createQrScannerInstance();
+      const config = getScannerConfig(isFrontCam);
+
+      html5QrCode.start(
+        cameraId,
+        config,
+        onQrCodeScanned,
+        () => {}
+      ).then(async () => {
+        isStartingCamera = false;
+        if (!isScannerOpen) {
+          try { if (html5QrCode) { await html5QrCode.stop(); html5QrCode.clear(); } } catch (e) {}
+          html5QrCode = null;
+          isCameraScanning = false;
+          return;
+        }
+        onCameraStarted();
+      }).catch(() => {
+        isStartingCamera = false;
+        try { if (html5QrCode) html5QrCode.clear(); } catch (e) {}
+        html5QrCode = null;
+        isCameraScanning = false;
+        if (isScannerOpen) startCamera();
+      });
+    }
+
+    function getRunningVideoTrack() {
+      const videoElem = document.querySelector('#camera-reader video');
+      if (videoElem && videoElem.srcObject && typeof videoElem.srcObject.getVideoTracks === 'function') {
+        return videoElem.srcObject.getVideoTracks()[0] || null;
+      }
+      return null;
+    }
+
+    function isTorchSupportedByTrack(track) {
+      if (!track || typeof track.getCapabilities !== 'function') return false;
+      try {
+        const caps = track.getCapabilities();
+        if (caps && caps.torch) return true;
+        if (caps && Array.isArray(caps.fillLightMode) && caps.fillLightMode.includes('flash')) return true;
+      } catch (e) {}
+      return false;
+    }
+
+    function updateTorchUi(active) {
+      const btn = document.getElementById('btn-torch');
+      if (!btn) return;
+      btn.classList.toggle('torch-active', !!active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      btn.innerText = active ? '⚡ Đang bật Flash' : '⚡ Flash';
+    }
+
+    function refreshTorchButtonVisibility() {
+      const torchBtn = document.getElementById('btn-torch');
+      if (!torchBtn || !isCameraScanning) return;
+
+      const track = getRunningVideoTrack();
+      if (track && typeof track.getSettings === 'function') {
+        try {
+          const settings = track.getSettings();
+          if (settings && settings.facingMode === 'user') {
+            isCurrentCameraFront = true;
+          } else if (settings && settings.facingMode === 'environment') {
+            isCurrentCameraFront = false;
+          }
+        } catch (e) {}
+      }
+
+      let supported = isTorchSupportedByTrack(track);
+      if (!supported && html5QrCode && typeof html5QrCode.getRunningTrackCapabilities === 'function') {
+        try {
+          const caps = html5QrCode.getRunningTrackCapabilities();
+          if (caps && caps.torch) supported = true;
+        } catch (e) {}
+      }
+
+      // Hiện nút Flash nếu thiết bị báo hỗ trợ Torch hoặc đang dùng camera sau trên điện thoại
+      if (supported || (IS_TOUCH_MOBILE && !isCurrentCameraFront)) {
+        torchBtn.style.display = 'inline-flex';
+      } else {
+        torchBtn.style.display = 'none';
+      }
+    }
+
+    function onCameraStarted() {
+      isCameraScanning = true;
+      isTorchOn = false;
+      updateTorchUi(false);
+
+      const vid = document.querySelector('#camera-reader video');
+      if (vid) {
+        setupScannerVideoElement(vid);
+        fitScannerVideoCover(vid);
+      }
+
+      // Kích hoạt lấy nét liên tục trên Android/Chrome (tránh gọi trên iOS Safari vì WebKit tự lấy nét mượt)
+      if (!IS_IOS) {
+        try {
+          const track = getRunningVideoTrack();
+          if (track && typeof track.getCapabilities === 'function' && typeof track.applyConstraints === 'function') {
+            const caps = track.getCapabilities();
+            if (caps && Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) {
+              track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+            }
+          }
+        } catch (e) {}
+      }
+
+      refreshTorchButtonVisibility();
+      if (torchCheckTimer) clearTimeout(torchCheckTimer);
+      torchCheckTimer = setTimeout(refreshTorchButtonVisibility, 280);
+
+      // CHỈ dùng enumerateDevices() (KHÔNG gọi Html5Qrcode.getCameras() vì nó mở stream thứ 2 làm đen camera iOS Safari)
+      checkCamerasPassively();
+    }
+
+    async function checkCamerasPassively() {
+      if (!navigator.mediaDevices || typeof navigator.mediaDevices.enumerateDevices !== 'function') return;
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter(d => d.kind === 'videoinput' && d.deviceId);
+        const switchBtn = document.getElementById('btn-switch-cam');
+        if (videoInputs.length > 1) {
+          availableCameras = videoInputs.map(d => ({ id: d.deviceId, label: d.label || '' }));
+          const track = getRunningVideoTrack();
+          const activeId = track && typeof track.getSettings === 'function' ? track.getSettings().deviceId : null;
+          if (activeId) {
+            const idx = availableCameras.findIndex(c => c.id === activeId);
+            if (idx >= 0) currentCameraIndex = idx;
+          }
+          if (switchBtn && isCameraScanning) switchBtn.style.display = 'inline-flex';
+        } else if (switchBtn) {
+          switchBtn.style.display = 'none';
+        }
+      } catch (e) {}
+    }
+
+    async function setTorchState(targetState) {
+      if (!html5QrCode || !isCameraScanning) return false;
+      const track = getRunningVideoTrack();
+      let capSupported = isTorchSupportedByTrack(track);
+      if (!capSupported && typeof html5QrCode.getRunningTrackCapabilities === 'function') {
+        try {
+          const caps = html5QrCode.getRunningTrackCapabilities();
+          if (caps && caps.torch) capSupported = true;
+        } catch (e) {}
+      }
+
+      const attempts = [
+        { advanced: [{ torch: targetState }] },
+        { torch: targetState }
+      ];
+      for (const constraints of attempts) {
+        let applied = false;
+        try {
+          await html5QrCode.applyVideoConstraints(constraints);
+          applied = true;
+        } catch (e) {
+          try {
+            if (track && typeof track.applyConstraints === 'function') {
+              await track.applyConstraints(constraints);
+              applied = true;
+            }
+          } catch (e2) {}
+        }
+        if (applied) {
+          if (capSupported) return true;
+          if (track && typeof track.getSettings === 'function') {
+            try {
+              const s = track.getSettings();
+              if (s && s.torch === targetState) return true;
+            } catch (e3) {}
+          }
+        }
+      }
+
+      try {
+        if (track && typeof track.applyConstraints === 'function') {
+          await track.applyConstraints({ torch: { exact: targetState } });
+          return true;
+        }
+      } catch (e4) {}
+
+      return false;
+    }
+
+    async function toggleTorch() {
+      if (!html5QrCode || !isCameraScanning) return;
+      const nextState = !isTorchOn;
+      const ok = await setTorchState(nextState);
+      if (ok) {
+        isTorchOn = nextState;
+        updateTorchUi(isTorchOn);
+      } else {
+        isTorchOn = false;
+        updateTorchUi(false);
+        showToast('Thiết bị hoặc trình duyệt này chưa hỗ trợ đèn Flash qua web', true);
+      }
+    }
+
+    async function switchCamera() {
+      if (availableCameras.length < 2 || !html5QrCode || !isCameraScanning || isStartingCamera || isSwitchingCamera) return;
+      isSwitchingCamera = true;
+      currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
+      const nextCamera = availableCameras[currentCameraIndex];
+      const isFrontCam = /front|user|facetime|trước/i.test(nextCamera.label || '');
+
+      try {
+        if (isTorchOn) {
+          await setTorchState(false);
+          isTorchOn = false;
+          updateTorchUi(false);
+        }
+        await html5QrCode.stop();
+        try { html5QrCode.clear(); } catch (e) {}
+        html5QrCode = null;
+        isCameraScanning = false;
+        setTimeout(() => {
+          isSwitchingCamera = false;
+          startCameraWithId(nextCamera.id, isFrontCam);
+        }, 120);
+      } catch (e) {
+        isSwitchingCamera = false;
+        try { if (html5QrCode) html5QrCode.clear(); } catch (e2) {}
+        html5QrCode = null;
+        isCameraScanning = false;
+        if (isScannerOpen) startCamera();
+      }
+    }
 
     // Xử lý khi quét thấy mã QR (Diagram 1)
     async function onQrCodeScanned(decodedText) {
-      if (isScanPaused) return;
+      const code = (decodedText || '').trim();
+      if (!code || isScanPaused) return;
 
-      // "Tạm dừng Camera 1.5 giây (chống quét đúp)"
+      // Chống quét đúp ngay lập tức khi chờ phản hồi server & popup xác nhận
       isScanPaused = true;
-      setTimeout(() => {
-        // Sau 1.5s nếu người dùng chưa bấm Xác nhận thì tiếp tục cho phép quét nếu popup chưa mở
-      }, 1500);
 
       // Gửi mã về Máy chủ
       try {
         const res = await fetch('/api/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code: decodedText, gate: 'Cổng chính' })
+          body: JSON.stringify({ code: code, gate: 'Cổng chính' })
         });
         const data = await res.json();
 
@@ -1840,23 +2256,71 @@
     }
 
     // Nút "Thoát" trong popup (Diagram 1: Thoát khỏi giao diện soát vé, quay về trang danh sách mã vé)
-    function closeScanner() {
-      if (html5QrCode && isCameraScanning) {
-        html5QrCode.stop().then(() => {
-          isCameraScanning = false;
-          html5QrCode.clear();
-        }).catch(() => {
-          isCameraScanning = false;
+    async function closeScanner() {
+      if (isClosingScanner) return;
+      isClosingScanner = true;
+      isScannerOpen = false;
+      detachScannerVideoObserver();
+      if (torchCheckTimer) {
+        clearTimeout(torchCheckTimer);
+        torchCheckTimer = null;
+      }
+
+      try {
+        if (isTorchOn && html5QrCode && isCameraScanning) {
+          await setTorchState(false);
+        }
+        isTorchOn = false;
+        updateTorchUi(false);
+
+        const torchBtn = document.getElementById('btn-torch');
+        if (torchBtn) torchBtn.style.display = 'none';
+        const switchBtn = document.getElementById('btn-switch-cam');
+        if (switchBtn) switchBtn.style.display = 'none';
+
+        if (screenWakeLock) {
+          try { await screenWakeLock.release(); } catch (e) {}
+          screenWakeLock = null;
+        }
+
+        const scanner = html5QrCode;
+        const wasScanning = isCameraScanning;
+        html5QrCode = null;
+        isCameraScanning = false;
+        isStartingCamera = false;
+        isSwitchingCamera = false;
+        isCurrentCameraFront = false;
+
+        if (scanner) {
+          try {
+            if (wasScanning) {
+              await scanner.stop();
+            }
+            scanner.clear();
+          } catch (e) {}
+        }
+
+        document.getElementById('scanner-overlay').style.display = 'none';
+        document.getElementById('scan-result-card').style.display = 'none';
+        isScanPaused = false;
+
+        // Cập nhật lại số liệu và bảng
+        loadStats();
+        loadTickets();
+      } finally {
+        isClosingScanner = false;
+      }
+    }
+
+    // Tự động tắt Flash khi người dùng chuyển app / khóa màn hình
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && isTorchOn && isCameraScanning) {
+        setTorchState(false).then(() => {
+          isTorchOn = false;
+          updateTorchUi(false);
         });
       }
-      document.getElementById('scanner-overlay').style.display = 'none';
-      document.getElementById('scan-result-card').style.display = 'none';
-      isScanPaused = false;
-
-      // Cập nhật lại số liệu và bảng
-      loadStats();
-      loadTickets();
-    }
+    });
 
     // Khởi chạy khi tải trang
     window.addEventListener('DOMContentLoaded', () => {

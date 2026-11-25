@@ -207,14 +207,14 @@ async function generateStaffCard() {
         <div class="step-card">
           <div class="step-title">BƯỚC 2: Quét mã QR bên cạnh</div>
           <div class="step-desc">
-            Bật Camera điện thoại (hoặc app Zalo) soi vào mã QR bên trái và nhấn mở liên kết. Bấm <strong>"Cho phép"</strong> khi trình duyệt hỏi quyền sử dụng Camera.
+            Bật Camera điện thoại (mở bằng <strong>Safari</strong> trên iPhone hoặc <strong>Chrome</strong> trên Android). Nếu có cảnh báo bảo mật nội bộ: chọn <em>Hiển thị chi tiết → Truy cập trang web này</em> (iPhone) hoặc <em>Nâng cao → Tiếp tục</em> (Android), sau đó bấm <strong>"Cho phép"</strong> quyền Camera.
           </div>
         </div>
 
         <div class="step-card">
           <div class="step-title">BƯỚC 3: Bắt đầu soát vé</div>
           <div class="step-desc">
-            Đưa Camera quét mã QR trên vé của khách. Nhìn màu màn hình và nghe tiếng bíp để xử lý.
+            Nhấn <strong>"Cổng soát vé"</strong> và đưa Camera quét mã QR trên vé khách (có thể bật <strong>⚡ Flash</strong> khi thiếu sáng). Nhìn màu màn hình và nghe tiếng bíp để xử lý.
           </div>
         </div>
       </div>
@@ -227,15 +227,15 @@ async function generateStaffCard() {
       <div class="status-grid">
         <div class="badge-card bg-green">
           ✔ MÀN HÌNH XANH LÁ
-          <div class="badge-sub">Vé hợp lệ • Cho khách vào</div>
+          <div class="badge-sub">Thành công! • Cho vào (lưu ý Ghi chú nếu có)</div>
         </div>
         <div class="badge-card bg-orange">
-          ⚠ MÀN HÌNH MÀU CAM
-          <div class="badge-sub">ĐÃ VÀO RỒI • Giữ lại đối chiếu</div>
+          ⚠ ĐÃ VÀO RỒI (MÀN HÌNH ĐỎ)
+          <div class="badge-sub">Báo "Vé đã được soát lúc..." • Giữ lại đối chiếu</div>
         </div>
         <div class="badge-card bg-red">
-          ✖ MÀN HÌNH MÀU ĐỎ
-          <div class="badge-sub">Vé bị hủy / Giả mạo • Từ chối</div>
+          ✖ KHÔNG HỢP LỆ (MÀN HÌNH ĐỎ)
+          <div class="badge-sub">Vé bị hủy / Không tồn tại • Từ chối</div>
         </div>
       </div>
       <div style="text-align:center; margin-top:14px; font-size:12px; color:#785A5E;">

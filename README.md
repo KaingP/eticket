@@ -1,164 +1,157 @@
-# HƯỚNG DẪN VẬN HÀNH HỆ THỐNG SOÁT VÉ OFFLINE LAN
-## Sự kiện: "Hùng Vương Concert: GAME ON"
-### Chuẩn hóa 100% theo quy trình và giao diện Wireframe trong Google Drive
+# HÙNG VƯƠNG CONCERT: GAME ON — HỆ THỐNG SOÁT VÉ OFFLINE LAN
 
-> **Đặc tả hệ thống:** Giao diện thống nhất "Cổng soát vé" • Chạy hoàn toàn Offline trong mạng LAN • **KHÔNG CẦN CÀI ĐẶT IP TĨNH** • Nhân viên chỉ cần mở camera quét mã QR trên màn hình laptop để vào làm việc ngay.
+> **Đặc tả hệ thống:** Giao diện **Cổng soát vé** chuẩn nhận diện Đỏ Crimson `#AF1C2B` & Hồng Blush `#FCF1F2` • Chạy hoàn toàn **Offline trong mạng LAN** • **Không cần cài đặt IP tĩnh** • Hỗ trợ quét QR tốc độ cao `30fps` kèm đèn **⚡ Flash** & tối ưu ổn định cho **iPhone Safari / Android Chrome**.
 
 ---
 
 ## MỤC LỤC
-1. [Kiến trúc & Luồng hoạt động theo Google Drive](#1-kiến-trúc--luồng-hoạt-động-theo-google-drive)
-2. [Cài đặt & Khởi động hệ thống (3 bước siêu nhanh)](#2-cài-đặt--khởi-động-hệ-thống-3-bước-siêu-nhanh)
-3. [Hướng dẫn nhân viên truy cập từ điện thoại (Không gõ IP)](#3-hướng-dẫn-nhân-viên-truy-cập-từ-điện-thoại)
-4. [Hướng dẫn sử dụng chi tiết theo 4 biểu đồ](#4-hướng-dẫn-sử-dụng-chi-tiết-theo-4-biểu-đồ)
-   - [Biểu đồ 0: Quản lý danh sách mã vé (Nhập file, Xem chi tiết, Đổi trạng thái)](#biểu-đồ-0-quản-lý-danh-sách-mã-vé)
-   - [Biểu đồ 1: Soát vé - Quét mã QR (Camera, Chống quét đúp, Tiếp theo)](#biểu-đồ-1-soát-vé---quét-mã-qr)
-   - [Biểu đồ 2: Dashboard thẻ đếm (Tất cả, Đã soát, Chưa soát, Refresh)](#biểu-đồ-2-dashboard-thẻ-đếm)
-   - [Biểu đồ 3: Lọc danh sách theo thẻ Dashboard](#biểu-đồ-3-lọc-danh-sách-theo-thẻ-dashboard)
-5. [Cấu hình Router Wi-Fi & Mở Firewall](#5-cấu-hình-router-wi-fi--mở-firewall)
-6. [Kế hoạch xử lý sự cố khẩn cấp (Troubleshooting)](#6-kế-hoạch-xử-lý-sự-cố-khẩn-cấp-troubleshooting)
+1. [Kiến trúc & Tính năng nổi bật](#1-kiến-trúc--tính-năng-nổi-bật)
+2. [Cài đặt & Khởi động nhanh (1-Click / CLI)](#2-cài-đặt--khởi-động-nhanh)
+3. [Hướng dẫn nhân viên kết nối bằng điện thoại](#3-hướng-dẫn-nhân-viên-kết-nối-bằng-điện-thoại)
+4. [Hướng dẫn vận hành chi tiết](#4-hướng-dẫn-vận-hành-chi-tiết)
+5. [Trang Quản trị (/admin.html) & Bảo mật PIN](#5-trang-quản-trị-adminhtml--bảo-mật-pin)
+6. [Cấu hình Router Wi-Fi, SSL & Mở Firewall](#6-cấu-hình-router-wi-fi-ssl--mở-firewall)
+7. [Kiểm thử tự động & Xuất báo cáo](#7-kiểm-thử-tự-động--xuất-báo-cáo)
+8. [Xử lý sự cố khẩn cấp (Troubleshooting)](#8-xử-lý-sự-cố-khẩn-cấp-troubleshooting)
+
+> 📘 **Tài liệu hướng dẫn hệ thống đầy đủ (Full System Manual + API + Schema):** Xem chi tiết tại [docs/HUONG_DAN_HE_THONG.md](docs/HUONG_DAN_HE_THONG.md).
 
 ---
 
-## 1. KIẾN TRÚC & LUỒNG HOẠT ĐỘNG THEO GOOGLE DRIVE
+## 1. KIẾN TRÚC & TÍNH NĂNG NỔI BẬT
 
-Hệ thống được thiết kế tối giản, tập trung toàn bộ nghiệp vụ vào giao diện duy nhất **"Cổng soát vé"** theo đúng Wireframe:
-- **Header:** Tiêu đề "Cổng soát vé", Nút **"Soát vé"** (mở camera quét QR) và Nút **"Nhập danh sách"** (nạp file .csv/.json).
-- **Dashboard Thẻ Đếm:** 3 thẻ trạng thái **Tất cả**, **Đã soát**, **Chưa soát** cùng nút **Refresh**.
-- **Bộ lọc động:** Nhấp trực tiếp vào từng thẻ để lọc danh sách tương ứng.
-- **Tìm kiếm:** Ô **"Tìm kiếm mã vé"**, gõ mã và nhấn **Enter** để tra cứu tức thì (báo lỗi nếu không có).
-- **Bảng dữ liệu:** Đầy đủ 9 cột: `STT | Tên khách hàng | Email | Thời điểm mua vé | Mã vé | Số lượng vé | Trạng thái | Thời điểm check in | Note`.
-- **Xem chi tiết:** Nhấp vào Mã vé để mở bảng **"Chi tiết mã vé"** kèm nút **"Đóng bảng"**.
-- **Soát vé QR:** Tạm dừng 1.5s chống quét đúp, hiển thị **"Thành công!"** kèm **Ghi chú nếu có** hoặc **"Không hợp lệ"**, sau đó mở pop-up **"Quét mã tiếp theo?"** với 2 nút **"Xác nhận"** và **"Thoát"**.
+- **100% Offline LAN:** Toàn bộ HTML/CSS/JS, thư viện `html5-qrcode.min.js`, tạo QR (`qrcode`), CSDL `SQLite` (WAL mode) và âm thanh phản hồi (`WebAudio API`) đều chạy cục bộ, không tải bất kỳ tài nguyên ngoài Internet nào.
+- **Chống vào trùng tuyệt đối (Atomic Check-in):** Sử dụng `UPDATE tickets SET checked_in = 1 ... WHERE code = ? AND checked_in = 0 AND status = 'VALID'` trên SQLite WAL nên nhiều điện thoại quét cùng lúc vào 1 vé chỉ có **duy nhất 1 lượt hợp lệ**.
+- **Giao diện đồng bộ "HÙNG VƯƠNG CONCERT: GAME ON":**
+  - **Trang chính (`/`):** Header đỏ Crimson `#AF1C2B`, nút **Cổng soát vé**, nút **🔄 Tải lại**, nút **Nhập danh sách** (`.csv` / `.json`), 3 thẻ đếm **Tất cả / Đã soát / Chưa soát**, ô **Tìm kiếm mã vé**, bảng vé **8 cột** chuẩn mockup (`STT | Tên khách hàng | Email | Thời điểm mua vé | Mã vé | Số lượng vé | Trạng thái | Thời điểm check in`), modal **Chi tiết mã vé** kèm sửa **Ghi chú (Note)**.
+  - **Trình quét Camera QR tốc độ cao:** Tần số quét `30fps`, chỉ giải mã chuẩn `QR_CODE`, tự động lấy nét liên tục trên Android, tắt bước lật ảnh thừa ở camera sau, giữ tỉ lệ cảm biến gốc chống méo QR, hỗ trợ bật/tắt **⚡ Flash**, **🔄 Đổi Cam** (khi có ≥ 2 camera), tự tắt Flash khi thoát hoặc chuyển ứng dụng.
+  - **Tương thích ổn định trên iPhone Safari:** Giữ nguyên ngữ cảnh chạm của người dùng khi gọi `getUserMedia`, không mở luồng camera thứ hai gây đen màn hình, tắt `BarcodeDetector` thử nghiệm trên WebKit iOS, và tự động co giãn video vừa khung không phóng to quá khổ.
+  - **Trang QR kết nối (`/qr`):** Hiển thị mã QR lớn để nhân viên quét mở app ngay.
+  - **Trang Quản trị (`/admin.html`):** Xác thực PIN, thống kê theo cổng, 20 lượt quét gần nhất, hoàn tác check-in, xuất JSON/CSV và tải bản sao lưu SQLite `.db`.
+  - **Trang QR kiểm thử (`/test-qr.html`):** Sinh sẵn bộ mã QR mẫu (vé hợp lệ có ghi chú, vé đã vào, vé bị hủy, mã giả) để test trực tiếp.
 
 ---
 
-## 2. CÀI ĐẶT & KHỞI ĐỘNG HỆ THỐNG (CHẠY TRÊN MỌI MÁY TÍNH)
+## 2. CÀI ĐẶT & KHỞI ĐỘNG NHANH
 
-### Cách 1: Khởi động 1-Click (Khuyên dùng - Nhanh nhất trên mọi máy)
-- **Trên Windows:** Chỉ cần click đúp vào file **`start.bat`**.
-  - Script tự kiểm tra môi trường Node.js.
-  - Tự động cài đặt thư viện (`npm install`) nếu máy mới chưa có `node_modules`.
-  - Tự động nạp dữ liệu vé mẫu `tickets_sample.json` nếu CSDL chưa khởi tạo.
-  - Tự động khởi chạy Server và in mã QR để quét vào điện thoại!
-- **Trên macOS / Linux:** Mở Terminal và chạy:
+### Yêu cầu môi trường
+- **Node.js LTS** (khuyến nghị Node 18+ hoặc 20+).
+- **OpenSSL** (có sẵn trên macOS/Linux hoặc đi kèm Git for Windows / OpenSSL-Win64 nếu cần tự động tạo SSL theo IP mới).
+
+### Cách 1: Khởi động 1-Click (Khuyên dùng)
+- **Trên Windows:** Click đúp vào file **`start.bat`**.
+  - Tự động kiểm tra Node.js.
+  - Tự động cài đặt thư viện (`npm install --omit=dev`) nếu chưa có `node_modules`.
+  - Tự động nạp dữ liệu mẫu `tickets_sample.json` nếu chưa có `data/tickets.db`.
+  - Tự động kiểm tra/cập nhật chứng chỉ SSL theo IP LAN, khởi chạy máy chủ và in **mã QR truy cập** ngay trên màn hình console.
+- **Trên macOS / Linux:**
   ```bash
   chmod +x start.sh && ./start.sh
   ```
 
-### Cách 2: Khởi động thủ công bằng dòng lệnh (3 bước)
+### Cách 2: Khởi động thủ công bằng dòng lệnh
 ```bash
-# Bước 1: Cài đặt thư viện (chỉ chạy 1 lần khi mới tải code)
+# Bước 1: Cài đặt thư viện (chỉ chạy 1 lần)
 npm install
 
-# Bước 2: Nhập danh sách vé ban đầu vào CSDL
+# Bước 2: Nhập danh sách vé thật (CSV hoặc JSON)
 node import.js tickets_sample.json
 
 # Bước 3: Khởi động Server soát vé
-node server.js
+npm start
 ```
-Ngay lập tức, màn hình dòng lệnh của Laptop sẽ hiện **MÃ QR TERMINAL TO RÕ**:
-- Tự động nhận diện IP LAN của laptop (ví dụ `192.168.1.10` hoặc `192.168.168.9`).
-- Tự động sinh chứng chỉ HTTPS cho chính IP đó.
-- Hiển thị link truy cập: `https://<IP_LAN>`
-- Hiển thị mã QR để quét ngay trên màn hình đen console!
+*(Ghi chú: Trên macOS/Linux không chạy quyền root, có thể chạy cổng cao hơn như `PORT=8443 node server.js`)*
 
 ---
 
-## 3. HƯỚNG DẪN NHÂN VIÊN TRUY CẬP TỪ ĐIỆN THOẠI
+## 3. HƯỚNG DẪN NHÂN VIÊN KẾT NỐI BẰNG ĐIỆN THOẠI
 
-Nhân viên **KHÔNG CẦN GÕ BẤT KỲ ĐỊA CHỈ IP NÀO**.
-
-1. Nhân viên kết nối điện thoại vào mạng Wi-Fi sự kiện.
-2. Mở ứng dụng **Camera** trên điện thoại (hoặc Zalo / trình duyệt Chrome).
-3. Đưa camera soi vào **Mã QR đang hiển thị trên màn hình Laptop** (hoặc mở trang `https://<IP_LAN>/qr`).
-4. Bấm vào đường link hiện lên:
-   - **Trên Android (Chrome):** Bấm nút **"Nâng cao" (Advanced)** $\rightarrow$ Bấm dòng chữ nhỏ **"Tiếp tục truy cập (không an toàn)"**.
-   - **Trên iPhone (Safari):** Bấm nút **"Hiển thị chi tiết" (Show Details)** $\rightarrow$ Bấm **"truy cập trang web này" (visit this website)** $\rightarrow$ Xác nhận.
-5. Trang web **"Cổng soát vé"** mở ra ngay lập tức, sẵn sàng làm việc!
+Nhân viên **không cần nhớ hay gõ địa chỉ IP**:
+1. Kết nối điện thoại vào đúng mạng Wi-Fi sự kiện (hoặc Wi-Fi Hotspot do Laptop Server phát).
+2. Mở ứng dụng **Camera** (hoặc Zalo) quét **Mã QR** hiển thị trên cửa sổ console Laptop (hoặc mở `https://<IP_LAN>/qr` trên màn hình Laptop).
+3. Chạm vào đường dẫn `https://<IP_LAN>` vừa hiện lên để mở bằng trình duyệt:
+   - **iPhone (Safari):** Nếu hiện cảnh báo chứng chỉ nội bộ, bấm **"Hiển thị chi tiết" (Show Details)** → **"Truy cập trang web này" (Visit this website)** → xác nhận.
+   - **Android (Chrome):** Bấm **"Nâng cao" (Advanced)** → **"Tiếp tục truy cập (không an toàn)"**.
+4. Khi bấm **Cổng soát vé** lần đầu, chọn **"Cho phép" (Allow)** quyền Camera.
 
 ---
 
-## 4. HƯỚNG DẪN SỬ DỤNG CHI TIẾT THEO 4 BIỂU ĐỒ
+## 4. HƯỚNG DẪN VẬN HÀNH CHI TIẾT
 
-### Biểu đồ 0: Quản lý danh sách mã vé
-1. **Nhập danh sách:**
-   - Ấn button **"Nhập danh sách"** ở góc trên bên phải.
-   - Chọn file `.csv` hoặc `.json` muốn import.
-   - Ấn **"Xác nhận"**.
-   - Hệ thống tự kiểm tra định dạng và cấu trúc cột:
-     - Nếu không hợp lệ $\rightarrow$ Báo **"File lỗi"**.
-     - Nếu hợp lệ $\rightarrow$ Lưu CSDL với trạng thái "Chưa soát", cập nhật danh sách và báo **"Nhập thành công"**.
-2. **Tìm kiếm mã vé:**
-   - Ấn ô **"Tìm kiếm mã vé"** $\rightarrow$ Nhập mã vé $\rightarrow$ Nhấn **"Enter"**.
-   - Nếu không thấy vé $\rightarrow$ Hiển thị **"Báo lỗi"** (Không tìm thấy vé trong hệ thống).
-   - Nếu thấy vé $\rightarrow$ Hiển thị dòng vé tương ứng trong bảng.
-3. **Xem chi tiết thông tin vé:**
-   - Ấn vào **Mã vé** màu xanh gạch chân trên bảng.
-   - Hiện bảng thông tin chi tiết: Mã vé, Họ tên, Email, Số điện thoại, Thời điểm mua vé, Mã đơn hàng, Thông tin chuyển khoản/thanh toán, Số lượng vé, Trạng thái, Thời điểm check in, Ghi chú.
-   - Ấn **"Đóng bảng"** để quay lại.
-4. **Thay đổi trạng thái thủ công (Check-in tay khi camera không quét được):**
-   - Tại cột **Trạng thái**, ấn vào nút **"⏳ Chưa soát"**.
-   - Trình duyệt hiện hộp thoại xác nhận $\rightarrow$ Chọn Đồng ý.
-   - Hệ thống lập tức lưu thời gian thực tế, chuyển trạng thái thành **"✔ Đã soát"** và tăng bộ đếm "Đã soát" trên Dashboard.
+### A. Quản lý danh sách vé (Trang chính `/`)
+1. **Nhập danh sách:** Bấm **Nhập danh sách** (góc trên bên phải) → chọn file `.csv` hoặc `.json` → bấm **Xác nhận**.
+   - Nếu hợp lệ: Lưu/cập nhật vào DB (bảo toàn các vé đã check-in trước đó) và báo **"Nhập thành công"**.
+   - Nếu sai định dạng / thiếu cột Mã vé: Báo **"File lỗi"**.
+2. **Làm mới dữ liệu:** Bấm nút **🔄 Tải lại** ngay cạnh nút **Cổng soát vé** để đồng bộ tức thì số liệu Dashboard và bảng vé.
+3. **Lọc theo Dashboard:** Nhấp trực tiếp vào 3 thẻ **Tất cả**, **Đã soát**, **Chưa soát**.
+4. **Tìm kiếm mã vé:** Nhập mã vé, họ tên, SĐT hoặc mã đơn vào ô **"Tìm kiếm mã vé"** và nhấn **Enter** (bấm `✕` để xóa tìm kiếm).
+5. **Xem chi tiết & Sửa ghi chú:** Nhấp vào **Mã vé** màu đỏ trong bảng để mở popup **Chi tiết mã vé**. Tại dòng **Ghi chú (Note)**, bấm **✏ Sửa** để thêm hoặc cập nhật ghi chú (ví dụ: `voucher nước`, `quà tặng áo`).
+6. **Check-in / Hoàn tác thủ công:** Nhấp vào nút **`Chưa soát ▼`** hoặc **`Đã soát ▼`** ở cột Trạng thái và xác nhận (dùng khi điện thoại khách bị nứt vỡ không quét được mã QR).
 
----
-
-### Biểu đồ 1: Soát vé - Quét mã QR
-1. Mở trang chủ $\rightarrow$ Ấn button **"Soát vé"**.
-2. Trình duyệt hiện pop-up hỏi quyền Camera $\rightarrow$ Ấn **"Cho phép" / "Xác nhận cấp quyền"**.
-3. Giao diện camera quét mã QR bật lên.
-4. Đưa Camera quét mã QR trên vé của khách.
-5. **Chống quét đúp:** Camera tự động **tạm dừng 1.5 giây** ngay khi bắt được mã.
-6. Hệ thống đối chiếu CSDL:
-   - **Hợp lệ:** Mã tồn tại và trạng thái là "Chưa soát" $\rightarrow$ Cập nhật "Đã soát", lưu thời gian thực tế, phát tiếng bíp vui tươi, hiện thông báo màu xanh **"Thành công!"** và **Ghi chú nếu có** (ví dụ: `Ghi chú: voucher`).
-   - **Không hợp lệ:** Mã không tồn tại hoặc vé đã soát trước đó $\rightarrow$ Rung cảnh báo, phát âm trầm, hiện thông báo màu đỏ **"Không hợp lệ"** kèm lý do (ví dụ: `Vé đã được soát lúc 18:05:30 (Cổng chính)`).
-7. Hiện pop-up câu hỏi: **"Quét mã tiếp theo?"**
-   - Ấn **"Xác nhận"**: Bật lại camera để quét vé của khách tiếp theo.
-   - Ấn **"Thoát"**: Tắt camera, đóng giao diện soát vé, quay về trang danh sách mã vé (tự động cập nhật số liệu mới nhất).
+### B. Soát vé bằng Camera QR
+1. Bấm **Cổng soát vé** để mở giao diện quét toàn màn hình.
+2. Đưa mã QR của khách vào khung ngắm giữa màn hình:
+   - **Hợp lệ:** Màn hình kết quả bật màu **Xanh lá `"Thành công!"`**, phát tiếng bíp cao, rung ngắn, hiện tên khách, loại vé, mã vé và **huy hiệu Ghi chú màu vàng** (nếu vé có ghi chú/quà tặng).
+   - **Không hợp lệ:** Màn hình kết quả bật màu **Đỏ `"Không hợp lệ"`**, phát âm trầm cảnh báo, rung dài và ghi rõ lý do (`Vé đã được soát lúc ...`, `Vé không hợp lệ (Trạng thái: CANCELLED)`, hoặc `Mã vé không tồn tại trong hệ thống`).
+3. Trên popup **"Quét mã tiếp theo?"**:
+   - Bấm **Xác nhận** để tiếp tục quét khách kế tiếp ngay.
+   - Bấm **Thoát** để tắt đèn Flash, đóng camera và tự động cập nhật lại bảng dữ liệu.
+4. **Sử dụng ⚡ Flash & 🔄 Đổi Cam:**
+   - Khi thiếu sáng, bấm **⚡ Flash** ở thanh điều khiển dưới màn hình (nút sáng vàng `"⚡ Đang bật Flash"`). Đèn tự động tắt khi bấm Thoát, đổi camera hoặc khóa màn hình.
+   - *Lưu ý riêng cho iPhone Safari:* Một số phiên bản iOS không cấp API bật đèn Flash qua trình duyệt web; nếu thiết bị không hỗ trợ hệ thống sẽ hiện thông báo nhắc bật đèn pin từ Trung tâm điều khiển iOS.
 
 ---
 
-### Biểu đồ 2: Dashboard thẻ đếm
-- Ngay đầu trang hiển thị 3 thẻ đếm:
-  - **Tất cả:** Tổng số lượng vé hiện có trong hệ thống (Mặc định).
-  - **Đã soát:** Tổng số khách đã qua cổng check-in thành công.
-  - **Chưa soát:** Số khách chưa đến sự kiện.
-- **Nút Refresh:** Bấm vào nút Refresh để hệ thống truy vấn CSDL và tính toán cập nhật lại toàn bộ số liệu mới nhất.
+## 5. TRANG QUẢN TRỊ (`/admin.html`) & BẢO MẬT PIN
+
+- Truy cập `https://<IP_LAN>/admin.html`.
+- Nhập **Mã PIN quản trị** (mặc định: `123456`, có thể đổi qua biến môi trường `ADMIN_PIN=xxxxxx`).
+- Các chức năng chính:
+  - Theo dõi tỷ lệ khách đã check-in, thống kê theo **Cổng** và **20 lượt quét gần nhất**.
+  - Tìm kiếm, lọc vé và **Hoàn tác** trạng thái check-in nếu nhân viên quét nhầm.
+  - Tải báo cáo tức thì: **📥 JSON**, **📊 CSV** (mở thẳng bằng Excel không lỗi tiếng Việt), và **💾 Backup DB** (tải nguyên file `tickets.db` an toàn).
 
 ---
 
-### Biểu đồ 3: Lọc danh sách theo thẻ Dashboard
-- Trạng thái **"Tất cả"** là trạng thái mặc định.
-- Ấn vào thẻ **"Đã soát"** $\rightarrow$ Bảng tự động chỉ hiển thị các vé đã check-in.
-- Ấn vào thẻ **"Chưa soát"** $\rightarrow$ Bảng tự động chỉ hiển thị các vé chưa check-in.
-- Ấn lại thẻ **"Tất cả"** $\rightarrow$ Bảng quay về hiển thị toàn bộ vé.
+## 6. CẤU HÌNH ROUTER WI-FI, SSL & MỞ FIREWALL
 
----
-
-## 5. CẤU HÌNH ROUTER WI-FI & MỞ FIREWALL
-
-### Mở Firewall Windows trên Laptop Server (Chỉ chạy 1 lần):
-Mở PowerShell bằng quyền Administrator:
+### Mở Firewall Windows (chạy 1 lần với PowerShell Administrator):
 ```powershell
 New-NetFirewallRule -DisplayName "SoatVe_LAN_443" -Direction Inbound -Protocol TCP -LocalPort 443 -Action Allow
 New-NetFirewallRule -DisplayName "SoatVe_LAN_80" -Direction Inbound -Protocol TCP -LocalPort 80 -Action Allow
 ```
 
 ### Cấu hình Router Wi-Fi cục bộ:
-1. **Không cắm dây Internet vào cổng WAN:** Giữ mạng cô lập 100% offline.
-2. Cắm cáp LAN từ Laptop vào cổng LAN (màu vàng) trên Router.
-3. Bật **DHCP Server** trên Router để router tự cấp IP (không cần đặt IP tĩnh).
-4. **Tắt AP Isolation / Client Isolation** trong mục Wireless của Router để các điện thoại nhìn thấy Laptop Server.
-5. Khuyên dùng băng tần **5GHz** để sóng ổn định, chống nhiễu đám đông.
+1. Không cần cắm dây mạng vào cổng WAN (giữ mạng nội bộ cô lập ổn định).
+2. Nối dây LAN từ Laptop Server vào cổng LAN của Router (hoặc bật Mobile Hotspot trên Laptop).
+3. Bật **DHCP Server** để tự cấp IP cho điện thoại nhân viên.
+4. **Tắt AP Isolation / Client Isolation** để điện thoại nhìn thấy Laptop Server.
+5. Ưu tiên băng tần **5GHz** tại khu vực cổng check-in đông người.
 
 ---
 
-## 6. KẾ HOẠCH XỬ LÝ SỰ CỐ KHẨN CẤP (TROUBLESHOOTING)
+## 7. KIỂM THỬ TỰ ĐỘNG & XUẤT BÁO CÁO
 
-| Tình huống | Cách khắc phục tức thì |
+| Lệnh NPM | Chức năng |
 | :--- | :--- |
-| **Mất kết nối Wi-Fi** | Hệ thống hiện banner đỏ `⚠ MẤT KẾT NỐI ĐẾN MÁY CHỦ` và tạm dừng thao tác để tránh sai lệch dữ liệu. Khi Wi-Fi kết nối lại, hệ thống tự động đồng bộ tiếp. |
-| **Laptop bị sập nguồn / Hết pin** | Cắm sạc, bật lại Laptop, chạy `node server.js`. Dữ liệu vé đã soát được bảo toàn 100% nhờ SQLite chế độ WAL. |
-| **Router bị hỏng phần cứng** | Bật tính năng **Mobile Hotspot** ngay trên Laptop Server để các điện thoại kết nối trực tiếp vào Laptop. Không cần phụ thuộc Router ngoài! |
-| **Xuất báo cáo sau sự kiện** | Chạy `node export.js` để xuất ra 2 file `data/tickets_export.csv` (mở bằng Excel) và `data/tickets_export.json`. |
+| `npm start` | Khởi chạy Server HTTPS (443) + HTTP redirect (80) |
+| `npm run import` | Nhập danh sách vé từ `tickets_sample.json` hoặc `data/tickets.json` |
+| `npm run export` | Xuất báo cáo ra `data/tickets_export.json` & `data/tickets_export.csv` |
+| `npm run make-qr` | Tạo bộ mã QR mẫu (`data/test_qrs/`, `public/test-qr.html`) |
+| `npm run make-card` | Tạo phiếu hướng dẫn in A4 (`docs/huong-dan-nhan-vien.html`) |
+| `npm test` | Chạy 6 bài test lõi (`tests/test.js`) |
+| `npm run test:specs` | Chạy kiểm thử theo 4 biểu đồ spec (`tests/test_drive_specs.js`) |
+| `npm run test:ui` | Chạy kiểm thử UI tĩnh + Headless Chromium CDP (`tests/test_ui.js`) |
+| `npm run test:all` | Chạy toàn bộ tất cả bộ kiểm thử (`test` + `test:specs` + `test:ui`) |
+
+---
+
+## 8. XỬ LÝ SỰ CỐ KHẨN CẤP (TROUBLESHOOTING)
+
+| Tình huống | Cách xử lý ngay tại chỗ |
+| :--- | :--- |
+| **Banner đỏ `⚠ MẤT KẾT NỐI ĐẾN MÁY CHỦ`** | Kiểm tra lại Wi-Fi sự kiện trên điện thoại. Khi kết nối lại, bấm **🔄 Tải lại** để đồng bộ. |
+| **iPhone Safari báo không mở được Camera** | Đảm bảo mở đúng link `https://...`, đã bấm *"Truy cập trang web này"*, và kiểm tra *Cài đặt → Safari → Camera → Cho phép*. |
+| **Laptop Server hết pin / khởi động lại** | Bật lại máy và chạy `start.bat` / `node server.js`. Toàn bộ lượt check-in đã ghi được bảo toàn 100% nhờ SQLite WAL + tự động backup 5 phút/lần vào `data/backup/`. |
+| **Router Wi-Fi gặp sự cố** | Bật **Mobile Hotspot** trực tiếp trên Laptop Server, cho điện thoại nhân viên kết nối vào Hotspot và khởi động lại `server.js` (server tự nhận IP Hotspot mới). |
+| **Không quét được QR do màn hình khách vỡ** | Gõ tên/SĐT/mã vé vào ô tìm kiếm trên trang chính, mở chi tiết đối chiếu và bấm **`Chưa soát ▼`** để check-in thủ công. |

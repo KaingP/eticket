@@ -6,6 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 const { execSync } = require('child_process');
 const https = require('https');
 const http = require('http');
@@ -135,8 +136,10 @@ function getLanIps() {
 // Lấy IP LAN chính xác nhất của máy chủ
 function getPrimaryIp() {
   const ips = getLanIps();
-  const lanIp = ips.find(ip => ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.'));
-  return lanIp || ips[0] || '127.0.0.1';
+  const preferred192 = ips.find(ip => ip.startsWith('192.168.') && !ip.startsWith('192.168.56.'));
+  if (preferred192) return preferred192;
+  const anyLan = ips.find(ip => ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.'));
+  return anyLan || ips[0] || '127.0.0.1';
 }
 
 // Tự động kiểm tra và sinh chứng chỉ SSL phù hợp với IP hiện tại
@@ -148,7 +151,15 @@ function ensureSslCert(primaryIp, allIps) {
   } else {
     try {
       const certContent = fs.readFileSync(CERT_PATH, 'utf8');
-      if (!certContent.includes(primaryIp) && primaryIp !== '127.0.0.1') {
+      if (typeof crypto.X509Certificate === 'function') {
+        const certObj = new crypto.X509Certificate(certContent);
+        const san = certObj.subjectAltName || '';
+        const isExpired = Date.parse(certObj.validTo) <= Date.now();
+        const hasIp = primaryIp === '127.0.0.1' || san.includes(`IP Address:${primaryIp}`);
+        if (isExpired || !hasIp) {
+          needsGen = true;
+        }
+      } else if (!certContent.includes(primaryIp) && primaryIp !== '127.0.0.1') {
         needsGen = true;
       }
     } catch (e) {

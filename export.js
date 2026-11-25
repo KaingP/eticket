@@ -51,7 +51,8 @@ function exportData(dbInstance) {
     'Trạng thái',
     'Đã check-in',
     'Thời gian check-in',
-    'Cổng soát vé'
+    'Cổng soát vé',
+    'Ghi chú'
   ];
 
   const csvLines = [csvHeaders.join(',')];
@@ -80,7 +81,8 @@ function exportData(dbInstance) {
       status: row.status,
       checkedIn: isCheckedIn,
       checkedInAt: row.checked_at,
-      gate: row.gate
+      gate: row.gate,
+      note: row.note || ''
     };
 
     exportJsonObj.tickets[row.code] = updatedTicket;
@@ -96,7 +98,8 @@ function exportData(dbInstance) {
       escapeCsvField(row.status),
       escapeCsvField(isCheckedIn ? 'ĐÃ VÀO' : 'CHƯA VÀO'),
       escapeCsvField(row.checked_at || ''),
-      escapeCsvField(row.gate || '')
+      escapeCsvField(row.gate || ''),
+      escapeCsvField(row.note || '')
     ];
     csvLines.push(csvRow.join(','));
   }
