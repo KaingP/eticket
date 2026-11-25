@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 const ROOT_DIR = fs.existsSync(path.join(__dirname, 'server.js')) ? __dirname : path.resolve(__dirname, '..');
-const { runImport } = require(path.join(ROOT_DIR, 'import'));
+const { runImport, importTicketsData } = require(path.join(ROOT_DIR, 'import'));
 const { handleCheckin } = require(path.join(ROOT_DIR, 'server'));
 const { exportData } = require(path.join(ROOT_DIR, 'export'));
 
@@ -142,23 +142,26 @@ async function runTestSuite() {
   console.log(`👉 Test 4: HOÀN THÀNH XUẤT SẮC (Các vé cùng đơn không bị ảnh hưởng lẫn nhau)\n`);
 
   // -------------------------------------------------------------
-  // TEST 5: Export rồi import lại: Dữ liệu không đổi
+  // TEST 5: Export rồi import lại: Dữ liệu không đổi (JSON + CSV + Note + Gate + Cột CSV đảo thứ tự)
   // -------------------------------------------------------------
   console.log(`[TEST 5] Kiểm tra tính toàn vẹn: Export rồi Import lại...`);
 
-  // Chụp snapshot trạng thái hiện tại
-  const beforeSnapshot = db.prepare(`SELECT code, status, checked_in, checked_at, gate FROM tickets ORDER BY code`).all();
+  // Gắn note để kiểm tra bảo toàn ghi chú khi export/import và re-import không có note
+  db.prepare(`UPDATE tickets SET note = ? WHERE code = ?`).run('quà VIP test', code1);
 
-  // Export
-  const { jsonString } = exportData(db);
+  // Chụp snapshot trạng thái hiện tại
+  const beforeSnapshot = db.prepare(`SELECT code, status, checked_in, checked_at, gate, note FROM tickets ORDER BY code`).all();
+
+  // Export JSON & CSV
+  const { jsonString, csvString } = exportData(db);
   const tempExportFile = path.join(DATA_DIR, 'temp_test_export.json');
   fs.writeFileSync(tempExportFile, jsonString, 'utf8');
 
-  // Import lại từ file vừa export
+  // Import lại từ file JSON vừa export
   runImport(tempExportFile);
 
-  // Lấy snapshot sau import
-  const afterSnapshot = db.prepare(`SELECT code, status, checked_in, checked_at, gate FROM tickets ORDER BY code`).all();
+  // Lấy snapshot sau import JSON
+  const afterSnapshot = db.prepare(`SELECT code, status, checked_in, checked_at, gate, note FROM tickets ORDER BY code`).all();
 
   assert(beforeSnapshot.length === afterSnapshot.length, 'Số lượng vé không đổi');
   for (let i = 0; i < beforeSnapshot.length; i++) {
@@ -168,7 +171,31 @@ async function runTestSuite() {
     assert(b.checked_in === a.checked_in, `Trạng thái check-in vé ${b.code} không đổi: ${b.checked_in}`);
     assert(b.checked_at === a.checked_at, `Thời gian check-in vé ${b.code} không đổi: ${b.checked_at}`);
     assert(b.gate === a.gate, `Cổng check-in vé ${b.code} không đổi: ${b.gate}`);
+    assert((b.note || '') === (a.note || ''), `Ghi chú vé ${b.code} không đổi: ${b.note || ''}`);
   }
+
+  // Kiểm tra CSV export -> DB trống -> Import CSV bảo toàn cả gate & note
+  assert(csvString.includes('Cổng soát vé') && csvString.includes('Ghi chú'), 'CSV export chứa đầy đủ cột Cổng soát vé và Ghi chú');
+  db.exec(`DELETE FROM scan_log; DELETE FROM tickets;`);
+  importTicketsData(csvString, 'tickets_export.csv');
+  const afterCsvSnapshot = db.prepare(`SELECT code, status, checked_in, checked_at, gate, note FROM tickets ORDER BY code`).all();
+  assert(afterCsvSnapshot.length === beforeSnapshot.length, 'Import lại từ CSV giữ nguyên tổng số vé');
+  const csvCode1 = afterCsvSnapshot.find(r => r.code === code1);
+  assert(csvCode1 && csvCode1.gate === beforeSnapshot.find(r => r.code === code1).gate, 'Import từ CSV bảo toàn đúng Cổng soát vé');
+  assert(csvCode1 && csvCode1.note === 'quà VIP test', 'Import từ CSV bảo toàn đúng Ghi chú');
+
+  // Kiểm tra re-import dữ liệu không có note không xóa note hiện có của nhân viên
+  importTicketsData(JSON.stringify([{ ticketCode: code1, customerName: 'Nguyễn Hoàng Nam', status: 'VALID' }]), 'update.json');
+  const afterReimportNoNote = db.prepare(`SELECT note FROM tickets WHERE code = ?`).get(code1);
+  assert(afterReimportNoNote && afterReimportNoNote.note === 'quà VIP test', 'Re-import vé không kèm note không ghi đè mất ghi chú đã lưu');
+
+  // Kiểm tra CSV có "Mã đơn hàng" và "ticketTypeName" đứng TRƯỚC "Mã vé" và "Họ tên"
+  const trickyCsv = `Mã đơn hàng,ticketTypeName,Họ tên,Mã vé\nORD-999,VIP Pass,Lê Minh Anh,HVC-TRICKY-001\n`;
+  importTicketsData(trickyCsv, 'tricky.csv');
+  const trickyRow = db.prepare(`SELECT code, name, order_id, type FROM tickets WHERE code = ?`).get('HVC-TRICKY-001');
+  assert(trickyRow && trickyRow.code === 'HVC-TRICKY-001' && trickyRow.name === 'Lê Minh Anh' && trickyRow.order_id === 'ORD-999',
+    'CSV có Mã đơn hàng / ticketTypeName đứng trước vẫn ánh xạ chính xác cột Mã vé và Họ tên');
+  db.prepare(`DELETE FROM tickets WHERE code = ?`).run('HVC-TRICKY-001');
 
   // Dọn dẹp file test tạm
   if (fs.existsSync(tempExportFile)) fs.unlinkSync(tempExportFile);

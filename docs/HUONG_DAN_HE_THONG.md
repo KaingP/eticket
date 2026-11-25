@@ -240,6 +240,7 @@ File CSV (UTF-8 hoặc UTF-8 BOM, phân tách dấu phẩy `,`, hỗ trợ chu�
 | **Trạng thái vé** | `Trạng thái`, `status` (`VALID`, `CANCELLED`, ...) | Không (mặc định `VALID`) |
 | **Đã check-in** | `Đã check-in`, `Đã soát`, `checkedIn`, `checked_in` (`1`/`true`/`đã...`) | Không |
 | **Thời gian check-in** | `Thời gian check-in`, `Thời điểm check in`, `checkedInAt`, `checked_at` | Không |
+| **Cổng soát vé** | `Cổng soát vé`, `Cổng vào`, `Cổng`, `gate` | Không |
 | **Thời điểm mua vé** | `Thời điểm mua vé`, `Thời gian mua vé`, `issuedAt`, `purchaseTime`, `ngày mua` | Không |
 | **Ghi chú** | `Ghi chú`, `note`, `voucher` | Không |
 

@@ -415,16 +415,25 @@ async function runTier2CDP(binPath) {
     assert(fs.existsSync(path.join(SCREENSHOT_DIR, 'ui_mobile.png')),
       'Đã xuất ảnh chụp giao diện Mobile: data/screenshots/ui_mobile.png');
 
-    // Kiểm tra nút Tải lại trên Mobile
+    // Kiểm tra nút Tải lại trên Mobile (cả online và offline)
     const reloadOk = await evalJs(`(async () => {
       const btn = document.getElementById('btn-reload');
       if (!btn) return false;
       btn.click();
       await new Promise(r => setTimeout(r, 150));
       const toast = document.getElementById('toast');
-      return btn.innerText.includes('Tải lại') && toast && toast.style.display === 'block';
+      const onlineOk = btn.innerText.includes('Tải lại') && toast && toast.style.display === 'block' && toast.className === 'success';
+
+      // Giả lập mất kết nối -> Tải lại không được báo xanh giả
+      const origFetch = window.fetch;
+      window.fetch = () => Promise.reject(new Error('Network offline'));
+      await refreshDashboard();
+      const offlineOk = document.getElementById('offline-alert').style.display === 'block' && toast.className === 'error';
+      window.fetch = origFetch;
+      await Promise.all([loadStats(), loadTickets()]);
+      return onlineOk && offlineOk;
     })()`);
-    assert(reloadOk, 'Nút "Tải lại" hoạt động mượt mà và hiển thị thông báo cập nhật');
+    assert(reloadOk, 'Nút "Tải lại" hoạt động chuẩn xác khi online lẫn khi mất kết nối máy chủ');
     console.log('👉 Test U9: HOÀN THÀNH XUẤT SẮC');
 
     // [TEST U10] Modal Interactive Opening, Fitting, and Closing on Mobile
@@ -606,11 +615,8 @@ async function runTier2CDP(binPath) {
       const hdTrack = hdStream.getVideoTracks()[0];
       hdTrack.getCapabilities = () => ({ deviceId: 'ios-back' }); // Không có torch capability (mô phỏng iOS Safari)
       hdTrack.getSettings = () => ({ deviceId: 'ios-back', width: 1280, height: 720 });
-      hdTrack.applyConstraints = async (c) => {
-        if (c && c.torch && typeof c.torch === 'object' && 'exact' in c.torch) {
-          throw new DOMException('Overconstrained', 'OverconstrainedError');
-        }
-        // Mô phỏng W3C advanced silent no-op khi không hỗ trợ torch
+      hdTrack.applyConstraints = async () => {
+        // Mô phỏng đúng hành vi WebIDL của WebKit Safari iOS: bỏ qua im lặng cả constraint { torch: { exact } }
         return;
       };
 
@@ -650,7 +656,81 @@ async function runTier2CDP(binPath) {
     assert(hdAndFallbackPerf.vidH <= hdAndFallbackPerf.boxH + 2,
       `Camera HD 1280x720 co giãn vừa khung (${hdAndFallbackPerf.vidW}x${hdAndFallbackPerf.vidH}px, boxH=${hdAndFallbackPerf.boxH}px) không bị phóng to mất khung hình`);
     assert(hdAndFallbackPerf.torchRemainedOff === true,
-      'Khi trình duyệt không hỗ trợ Torch thật (silent no-op), nút Flash không bật sáng giả');
+      'Khi trình duyệt không hỗ trợ Torch thật (kể cả WebKit silent no-op), nút Flash không bật sáng giả');
+
+    // Kiểm tra xoay ngang màn hình (Landscape 667x375) khi camera đang mở: video refit + qrRegion căn giữa
+    await evalJs(`(async () => {
+      const c = document.createElement('canvas');
+      c.width = 640; c.height = 480;
+      c.getContext('2d').fillRect(0, 0, 640, 480);
+      const s = c.captureStream(15);
+      const tr = s.getVideoTracks()[0];
+      tr.getCapabilities = () => ({ deviceId: 'cam-rot' });
+      tr.getSettings = () => ({ deviceId: 'cam-rot', width: 640, height: 480 });
+      navigator.mediaDevices.getUserMedia = async () => s;
+      document.getElementById('btn-open-scanner').click();
+      for (let i = 0; i < 40; i++) {
+        if (isCameraScanning) break;
+        await new Promise(r => setTimeout(r, 30));
+      }
+    })()`);
+    await sendCdp('Emulation.setDeviceMetricsOverride', {
+      width: 667,
+      height: 375,
+      deviceScaleFactor: 2,
+      mobile: true
+    });
+    await new Promise(r => setTimeout(r, 250));
+    const rotateCheck = await evalJs(`(async () => {
+      const vid = document.querySelector('#camera-reader video');
+      const box = document.getElementById('camera-reader');
+      const ratioX = vid ? vid.videoWidth / vid.clientWidth : 0;
+      const ratioY = vid ? vid.videoHeight / vid.clientHeight : 0;
+      const aspectDiff = Math.abs(ratioX - ratioY);
+      const regionCenterOk = html5QrCode && html5QrCode.qrRegion
+        ? Math.abs((html5QrCode.qrRegion.x + html5QrCode.qrRegion.width / 2) - vid.clientWidth / 2) < 2 &&
+          Math.abs((html5QrCode.qrRegion.y + html5QrCode.qrRegion.height / 2) - vid.clientHeight / 2) < 2
+        : false;
+      const covers = vid && box && vid.clientWidth >= box.clientWidth - 1 && vid.clientHeight >= box.clientHeight - 1;
+      await closeScanner();
+      return { aspectDiff, regionCenterOk, covers };
+    })()`);
+    assert(rotateCheck.aspectDiff < 0.05 && rotateCheck.covers && rotateCheck.regionCenterOk,
+      `Xoay ngang màn hình (667x375) camera tự cân lại không méo QR & giữ tâm vùng quét (diff=${rotateCheck.aspectDiff.toFixed(4)})`);
+
+    // Trả về portrait 375x667 để test race condition đóng scanner khi camera đang khởi động
+    await sendCdp('Emulation.setDeviceMetricsOverride', {
+      width: 375,
+      height: 667,
+      deviceScaleFactor: 2,
+      mobile: true
+    });
+    const raceCheck = await evalJs(`(async () => {
+      const c = document.createElement('canvas');
+      c.width = 640; c.height = 480;
+      c.getContext('2d').fillRect(0, 0, 640, 480);
+      const delayedStream = c.captureStream(15);
+      const delayedTrack = delayedStream.getVideoTracks()[0];
+      let trackStopped = false;
+      const origStop = delayedTrack.stop.bind(delayedTrack);
+      delayedTrack.stop = () => { trackStopped = true; return origStop(); };
+
+      navigator.mediaDevices.getUserMedia = () => new Promise(resolve => setTimeout(() => resolve(delayedStream), 120));
+      document.getElementById('btn-open-scanner').click();
+      await new Promise(r => setTimeout(r, 20));
+      await closeScanner();
+      await new Promise(r => setTimeout(r, 220));
+
+      return {
+        trackStopped,
+        isCameraScanning,
+        isScannerOpen,
+        hasQrInstance: html5QrCode !== null
+      };
+    })()`);
+    assert(raceCheck.trackStopped && !raceCheck.isCameraScanning && !raceCheck.isScannerOpen && !raceCheck.hasQrInstance,
+      'Đóng scanner khi camera đang xin quyền (race condition) vẫn tự thu hồi & tắt luồng camera sạch sẽ');
+
     console.log('👉 Test U13: HOÀN THÀNH XUẤT SẮC');
 
     // [TEST U11] Kiểm tra các trang phụ (Admin & Test QR)

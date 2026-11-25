@@ -638,11 +638,6 @@
 
           let timeStr = t.checked_at ? t.checked_at.replace('T', ' ').substring(0, 19) : '---';
 
-          let actionBtn = '---';
-          if (isChecked) {
-            actionBtn = `<button class="btn btn-danger" style="padding:4px 8px; font-size:11px; min-height:28px;" onclick="undoTicket('${escapeHtml(t.code)}')">Hoàn tác</button>`;
-          }
-
           tr.innerHTML = `
             <td style="font-family:monospace; font-weight:700; color:#AF1C2B;">${escapeHtml(t.code)}</td>
             <td style="font-weight:600;">${escapeHtml(t.name || '')}</td>
@@ -653,8 +648,19 @@
             <td>${statusBadge} ${checkinBadge}</td>
             <td>${escapeHtml(t.gate || '---')}</td>
             <td style="font-size:12px;">${escapeHtml(timeStr)}</td>
-            <td>${actionBtn}</td>
           `;
+          const actionTd = document.createElement('td');
+          if (isChecked) {
+            const undoBtn = document.createElement('button');
+            undoBtn.className = 'btn btn-danger';
+            undoBtn.style.cssText = 'padding:4px 8px; font-size:11px; min-height:28px;';
+            undoBtn.textContent = 'Hoàn tác';
+            undoBtn.addEventListener('click', () => undoTicket(t.code));
+            actionTd.appendChild(undoBtn);
+          } else {
+            actionTd.textContent = '---';
+          }
+          tr.appendChild(actionTd);
           tbody.appendChild(tr);
         }
       } catch (err) {

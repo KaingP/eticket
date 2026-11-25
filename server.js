@@ -153,9 +153,9 @@ function ensureSslCert(primaryIp, allIps) {
       const certContent = fs.readFileSync(CERT_PATH, 'utf8');
       if (typeof crypto.X509Certificate === 'function') {
         const certObj = new crypto.X509Certificate(certContent);
-        const san = certObj.subjectAltName || '';
+        const sanList = (certObj.subjectAltName || '').split(',').map(s => s.trim());
         const isExpired = Date.parse(certObj.validTo) <= Date.now();
-        const hasIp = primaryIp === '127.0.0.1' || san.includes(`IP Address:${primaryIp}`);
+        const hasIp = primaryIp === '127.0.0.1' || sanList.includes(`IP Address:${primaryIp}`);
         if (isExpired || !hasIp) {
           needsGen = true;
         }
@@ -183,6 +183,9 @@ function ensureSslCert(primaryIp, allIps) {
     }
 
     try {
+      if (!fs.existsSync(CERTS_DIR)) {
+        fs.mkdirSync(CERTS_DIR, { recursive: true });
+      }
       const altNames = [
         `IP.1 = ${primaryIp}`,
         `IP.2 = 192.168.1.10`,
@@ -191,7 +194,7 @@ function ensureSslCert(primaryIp, allIps) {
       ];
       let ipIdx = 5;
       for (const ip of allIps) {
-        if (!altNames.some(a => a.includes(ip))) {
+        if (!altNames.some(a => a.endsWith(` = ${ip}`))) {
           altNames.push(`IP.${ipIdx++} = ${ip}`);
         }
       }
@@ -350,14 +353,14 @@ function handleCheckin(rawCode, rawGate) {
 
 // 1. API Quét QR (Diagram 1)
 app.post('/api/scan', (req, res) => {
-  const { code, gate } = req.body;
+  const { code, gate } = req.body || {};
   const result = handleCheckin(code, gate);
   res.status(result.httpStatus).json(result.body);
 });
 
 // 2. API Check-in thủ công (Diagram 0: Thay đổi trạng thái thủ công từ "Chưa soát" -> "Đã soát")
 app.post('/api/manual-checkin', (req, res) => {
-  const { code, gate, toggle } = req.body;
+  const { code, gate, toggle } = req.body || {};
   const cleanCode = (code || '').trim().toUpperCase();
   if (!cleanCode) {
     return res.status(400).json({ status: 'INVALID', message: 'Mã vé không được để trống' });
@@ -562,7 +565,8 @@ app.get('/api/tickets/:code', (req, res) => {
 // 5.1 API Cập nhật ghi chú (Note) cho vé
 app.post('/api/tickets/:code/note', (req, res) => {
   const code = (req.params.code || '').trim().toUpperCase();
-  const note = (req.body.note || '').trim();
+  const body = req.body || {};
+  const note = (body.note || '').trim();
   const result = db.prepare('UPDATE tickets SET note = ? WHERE code = ?').run(note, code);
   if (result.changes === 1) {
     res.json({ success: true, status: 'OK', code, note });
@@ -574,7 +578,7 @@ app.post('/api/tickets/:code/note', (req, res) => {
 // 6. API Nhập danh sách vé (Diagram 0: Nhập file .csv hoặc .json)
 app.post('/api/import', (req, res) => {
   try {
-    const { filename, content } = req.body;
+    const { filename, content } = req.body || {};
     if (!content || !content.trim()) {
       return res.status(400).json({ success: false, message: 'File lỗi: Dữ liệu rỗng' });
     }
@@ -624,7 +628,7 @@ app.get('/api/search', (req, res) => {
 
 // 8. API Hoàn tác check-in (Yêu cầu PIN)
 app.post('/api/undo', (req, res) => {
-  const { code, pin } = req.body;
+  const { code, pin } = req.body || {};
   if (!pin || String(pin) !== String(ADMIN_PIN)) {
     return res.status(403).json({ status: 'FORBIDDEN', message: 'Mã PIN quản trị không chính xác' });
   }
@@ -699,8 +703,10 @@ app.get('/api/admin/tickets', (req, res) => {
 
   const filter = req.query.filter || 'all'; // all, checked, unchecked, invalid
   const search = (req.query.search || '').trim();
-  const limit = Math.min(parseInt(req.query.limit || '100', 10), 500);
-  const offset = parseInt(req.query.offset || '0', 10);
+  const parsedLimit = parseInt(req.query.limit || '100', 10);
+  const parsedOffset = parseInt(req.query.offset || '0', 10);
+  const limit = Math.min(Math.max(1, Number.isFinite(parsedLimit) ? parsedLimit : 100), 500);
+  const offset = Math.max(0, Number.isFinite(parsedOffset) ? parsedOffset : 0);
 
   let whereClauses = [];
   let params = [];

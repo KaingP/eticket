@@ -711,6 +711,8 @@
       z-index: 3000;
       width: 100%;
       height: 100%;
+      overscroll-behavior: none;
+      touch-action: manipulation;
     }
     .scanner-header {
       background: var(--scanner-header-bg);
@@ -795,6 +797,15 @@
     @keyframes scanSweep {
       0%, 100% { top: 0; }
       50% { top: calc(100% - 3px); }
+    }
+    @media (max-height: 500px) {
+      .scan-target-box {
+        width: min(200px, 44vw, 44vh);
+        height: min(200px, 44vw, 44vh);
+      }
+      .scan-hint-text {
+        top: 10px;
+      }
     }
 
     /* Thanh điều khiển dưới ngón cái (Thumb-zone control bar) */
@@ -1331,10 +1342,12 @@
     let isCurrentCameraFront = false;
     let isScanPaused = false; // Chống quét đúp khi đang xử lý kết quả
     let isTorchOn = false;
+    let isTogglingTorch = false;
     let availableCameras = [];
     let currentCameraIndex = 0;
     let screenWakeLock = null;
     let torchCheckTimer = null;
+    let switchCameraTimer = null;
     let scannerVideoObserver = null;
 
     // WebAudio
@@ -1429,8 +1442,10 @@
         document.getElementById('stat-checked').innerText = String(data.checked || 0).padStart(2, '0');
         document.getElementById('stat-unchecked').innerText = String(data.unchecked || 0).padStart(2, '0');
         document.getElementById('offline-alert').style.display = 'none';
+        return true;
       } catch (err) {
         document.getElementById('offline-alert').style.display = 'block';
+        return false;
       }
     }
 
@@ -1449,21 +1464,26 @@
 
         renderTable(data.tickets, data.total, data.page, data.totalPages);
         document.getElementById('offline-alert').style.display = 'none';
+        return true;
       } catch (err) {
         document.getElementById('offline-alert').style.display = 'block';
+        return false;
       }
     }
 
-    function refreshDashboard() {
+    async function refreshDashboard() {
       const btn = document.getElementById('btn-reload');
       if (btn) {
         btn.classList.remove('spinning');
         void btn.offsetWidth;
         btn.classList.add('spinning');
       }
-      loadStats();
-      loadTickets();
-      showToast('Đã làm mới dữ liệu');
+      const [statsOk, ticketsOk] = await Promise.all([loadStats(), loadTickets()]);
+      if (statsOk && ticketsOk) {
+        showToast('Đã làm mới dữ liệu');
+      } else {
+        showToast('Không thể kết nối đến máy chủ', true);
+      }
     }
 
     // Đổi bộ lọc theo thẻ Dashboard (Diagram 3: Lọc danh sách theo Dashboard)
@@ -1496,28 +1516,42 @@
         tickets.forEach(t => {
           const tr = document.createElement('tr');
           const isChecked = t.checkedIn === 1;
-          const noteTitle = t.note ? ` title="Ghi chú: ${escapeHtml(t.note)}"` : '';
+
+          const codeCell = document.createElement('td');
+          const codeLink = document.createElement('span');
+          codeLink.className = 'ticket-code-link';
+          if (t.note) codeLink.title = `Ghi chú: ${t.note}`;
+          codeLink.textContent = t.code;
+          codeLink.addEventListener('click', () => viewTicketDetail(t.code));
+          codeCell.appendChild(codeLink);
+
+          const statusCell = document.createElement('td');
+          const statusBadge = document.createElement('span');
+          statusBadge.className = `badge-status ${isChecked ? 'badge-checked' : 'badge-unchecked'}`;
+          statusBadge.title = 'Ấn để thay đổi trạng thái thủ công';
+          statusBadge.innerHTML = `${isChecked ? 'Đã soát' : 'Chưa soát'} <span class="status-caret">▼</span>`;
+          statusBadge.addEventListener('click', () => toggleTicketStatus(t.code, isChecked));
+          statusCell.appendChild(statusBadge);
 
           tr.innerHTML = `
             <td class="cell-stt">${t.stt}</td>
             <td style="font-weight: 500;">${escapeHtml(t.name || 'Khách hàng')}</td>
             <td style="color: var(--text-muted);">${escapeHtml(t.email || '-')}</td>
             <td>${formatTime(t.issuedAt) || '-'}</td>
-            <td>
-              <span class="ticket-code-link"${noteTitle} onclick="viewTicketDetail('${escapeHtml(t.code)}')">${escapeHtml(t.code)}</span>
-            </td>
-            <td>${escapeHtml(t.label || 'Vé 1/1')}</td>
-            <td>
-              <span class="badge-status ${isChecked ? 'badge-checked' : 'badge-unchecked'}" 
-                    onclick="toggleTicketStatus('${escapeHtml(t.code)}', ${isChecked})"
-                    title="Ấn để thay đổi trạng thái thủ công">
-                ${isChecked ? 'Đã soát' : 'Chưa soát'} <span class="status-caret">▼</span>
-              </span>
-            </td>
-            <td style="color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">
-              ${isChecked ? formatTime(t.checkedAt) : ''}
-            </td>
           `;
+          tr.appendChild(codeCell);
+
+          const labelCell = document.createElement('td');
+          labelCell.textContent = t.label || 'Vé 1/1';
+          tr.appendChild(labelCell);
+
+          tr.appendChild(statusCell);
+
+          const checkedAtCell = document.createElement('td');
+          checkedAtCell.style.cssText = 'color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;';
+          checkedAtCell.textContent = isChecked ? formatTime(t.checkedAt) : '';
+          tr.appendChild(checkedAtCell);
+
           tbody.appendChild(tr);
         });
       }
@@ -1666,9 +1700,14 @@
         document.getElementById('m-label-type').innerText = `${t.label || 'Vé 1/1'} • ${t.type || 'Vé Sự Kiện'}`;
         
         const isChecked = t.checkedIn === 1;
-        document.getElementById('m-status').innerHTML = isChecked 
-          ? '<span style="color: #059669; font-weight: 700;">✔ Đã soát</span>' 
-          : '<span style="color: #D97706; font-weight: 700;">⏳ Chưa soát</span>';
+        const isInvalidStatus = t.status && t.status !== 'VALID';
+        if (isInvalidStatus) {
+          document.getElementById('m-status').innerHTML = `<span style="color: #DC2626; font-weight: 700;">✖ Không hợp lệ (${escapeHtml(t.status)})</span>`;
+        } else {
+          document.getElementById('m-status').innerHTML = isChecked
+            ? '<span style="color: #059669; font-weight: 700;">✔ Đã soát</span>'
+            : '<span style="color: #D97706; font-weight: 700;">⏳ Chưa soát</span>';
+        }
         
         document.getElementById('m-checked-at').innerText = isChecked ? formatTime(t.checkedAt) : 'Chưa check-in';
         document.getElementById('m-note').innerText = t.note || 'Không có';
@@ -1795,8 +1834,10 @@
       isScannerOpen = true;
       isCurrentCameraFront = false;
       isSwitchingCamera = false;
+      isTogglingTorch = false;
       const toast = document.getElementById('toast');
       if (toast) toast.style.display = 'none';
+      document.body.style.overflow = 'hidden';
       document.getElementById('scanner-overlay').style.display = 'flex';
       document.getElementById('scan-result-card').style.display = 'none';
       isScanPaused = false;
@@ -1847,6 +1888,29 @@
       const h = Math.round(video.videoHeight * scale * 100) / 100;
       video.style.setProperty('width', w + 'px', 'important');
       video.style.setProperty('height', h + 'px', 'important');
+
+      // Đồng bộ lại vùng cắt QR theo kích thước video mới khi xoay màn hình / đổi viewport
+      if (html5QrCode && html5QrCode.qrRegion && isCameraScanning) {
+        const curRegion = html5QrCode.qrRegion;
+        const qrW = Math.max(50, Math.min(curRegion.width, Math.floor(w)));
+        const qrH = Math.max(50, Math.min(curRegion.height, Math.floor(h)));
+        if (html5QrCode.canvasElement && (html5QrCode.canvasElement.width !== qrW || html5QrCode.canvasElement.height !== qrH)) {
+          html5QrCode.canvasElement.width = qrW;
+          html5QrCode.canvasElement.height = qrH;
+        }
+        html5QrCode.qrRegion = {
+          x: Math.max(0, (w - qrW) / 2),
+          y: Math.max(0, (h - qrH) / 2),
+          width: qrW,
+          height: qrH
+        };
+      }
+    }
+
+    function handleScannerViewportResize() {
+      if (!isScannerOpen) return;
+      const vid = document.querySelector('#camera-reader video');
+      if (vid) fitScannerVideoCover(vid);
     }
 
     function setupScannerVideoElement(video) {
@@ -1856,7 +1920,10 @@
       video.setAttribute('webkit-playsinline', 'true');
       video.muted = true;
       video.autoplay = true;
-      video.addEventListener('loadedmetadata', () => fitScannerVideoCover(video));
+      const refit = () => fitScannerVideoCover(video);
+      video.addEventListener('loadedmetadata', refit);
+      video.addEventListener('loadeddata', refit);
+      video.addEventListener('resize', refit);
       if (video.videoWidth && video.videoHeight) {
         fitScannerVideoCover(video);
       }
@@ -1882,6 +1949,16 @@
       }
     }
 
+    function stopLeftoverVideoTracks() {
+      const vids = document.querySelectorAll('#camera-reader video');
+      vids.forEach((vid) => {
+        if (vid && vid.srcObject && typeof vid.srcObject.getTracks === 'function') {
+          vid.srcObject.getTracks().forEach(t => { try { t.stop(); } catch (e) {} });
+          vid.srcObject = null;
+        }
+      });
+    }
+
     function getScannerConfig(allowFlip = false) {
       return {
         fps: 30, // Tốc độ 30fps bắt mã QR ngay lập tức
@@ -1891,8 +1968,8 @@
           const visibleMin = box
             ? Math.min(box.clientWidth || viewfinderWidth, box.clientHeight || viewfinderHeight)
             : Math.min(viewfinderWidth, viewfinderHeight);
-          const maxSafe = Math.max(150, Math.min(viewfinderWidth, viewfinderHeight) - 16);
-          const target = Math.max(150, Math.min(250, Math.floor(visibleMin * 0.72), maxSafe));
+          const maxSafe = Math.max(50, Math.min(viewfinderWidth, viewfinderHeight) - 16);
+          const target = Math.max(50, Math.min(250, Math.floor(visibleMin * 0.72), maxSafe));
           return { width: target, height: target };
         }
       };
@@ -1909,28 +1986,35 @@
       }
 
       attachScannerVideoObserver();
-      html5QrCode = createQrScannerInstance();
+      const scanner = createQrScannerInstance();
+      html5QrCode = scanner;
       const config = getScannerConfig(false);
 
-      html5QrCode.start(
+      scanner.start(
         { facingMode: "environment" },
         config,
         onQrCodeScanned,
         () => {}
       ).then(async () => {
-        isStartingCamera = false;
-        if (!isScannerOpen) {
-          // Người dùng đã bấm thoát trong lúc camera đang khởi động
-          try { if (html5QrCode) { await html5QrCode.stop(); html5QrCode.clear(); } } catch (e) {}
-          html5QrCode = null;
-          isCameraScanning = false;
+        if (html5QrCode !== scanner || !isScannerOpen) {
+          // Người dùng đã bấm thoát hoặc chuyển luồng trong lúc camera đang khởi động
+          try { await scanner.stop(); } catch (e) {}
+          try { scanner.clear(); } catch (e) {}
+          stopLeftoverVideoTracks();
+          if (html5QrCode === scanner) {
+            html5QrCode = null;
+            isStartingCamera = false;
+            isCameraScanning = false;
+          }
           return;
         }
+        isStartingCamera = false;
         onCameraStarted();
       }).catch((err) => {
-        isStartingCamera = false;
-        try { if (html5QrCode) html5QrCode.clear(); } catch (e) {}
+        try { scanner.clear(); } catch (e) {}
+        if (html5QrCode !== scanner) return;
         html5QrCode = null;
+        isStartingCamera = false;
         isCameraScanning = false;
 
         if (!isScannerOpen) return;
@@ -1957,27 +2041,34 @@
       }
 
       attachScannerVideoObserver();
-      html5QrCode = createQrScannerInstance();
+      const scanner = createQrScannerInstance();
+      html5QrCode = scanner;
       const config = getScannerConfig(isFrontCam);
 
-      html5QrCode.start(
+      scanner.start(
         cameraId,
         config,
         onQrCodeScanned,
         () => {}
       ).then(async () => {
-        isStartingCamera = false;
-        if (!isScannerOpen) {
-          try { if (html5QrCode) { await html5QrCode.stop(); html5QrCode.clear(); } } catch (e) {}
-          html5QrCode = null;
-          isCameraScanning = false;
+        if (html5QrCode !== scanner || !isScannerOpen) {
+          try { await scanner.stop(); } catch (e) {}
+          try { scanner.clear(); } catch (e) {}
+          stopLeftoverVideoTracks();
+          if (html5QrCode === scanner) {
+            html5QrCode = null;
+            isStartingCamera = false;
+            isCameraScanning = false;
+          }
           return;
         }
+        isStartingCamera = false;
         onCameraStarted();
       }).catch(() => {
-        isStartingCamera = false;
-        try { if (html5QrCode) html5QrCode.clear(); } catch (e) {}
+        try { scanner.clear(); } catch (e) {}
+        if (html5QrCode !== scanner) return;
         html5QrCode = null;
+        isStartingCamera = false;
         isCameraScanning = false;
         if (isScannerOpen) startCamera();
       });
@@ -2105,6 +2196,17 @@
         } catch (e) {}
       }
 
+      const verifyApplied = () => {
+        if (capSupported) return true;
+        if (track && typeof track.getSettings === 'function') {
+          try {
+            const s = track.getSettings();
+            if (s && s.torch === targetState) return true;
+          } catch (e3) {}
+        }
+        return false;
+      };
+
       const attempts = [
         { advanced: [{ torch: targetState }] },
         { torch: targetState }
@@ -2122,21 +2224,13 @@
             }
           } catch (e2) {}
         }
-        if (applied) {
-          if (capSupported) return true;
-          if (track && typeof track.getSettings === 'function') {
-            try {
-              const s = track.getSettings();
-              if (s && s.torch === targetState) return true;
-            } catch (e3) {}
-          }
-        }
+        if (applied && verifyApplied()) return true;
       }
 
       try {
         if (track && typeof track.applyConstraints === 'function') {
           await track.applyConstraints({ torch: { exact: targetState } });
-          return true;
+          if (verifyApplied()) return true;
         }
       } catch (e4) {}
 
@@ -2144,16 +2238,24 @@
     }
 
     async function toggleTorch() {
-      if (!html5QrCode || !isCameraScanning) return;
-      const nextState = !isTorchOn;
-      const ok = await setTorchState(nextState);
-      if (ok) {
-        isTorchOn = nextState;
-        updateTorchUi(isTorchOn);
-      } else {
-        isTorchOn = false;
-        updateTorchUi(false);
-        showToast('Thiết bị hoặc trình duyệt này chưa hỗ trợ đèn Flash qua web', true);
+      if (!html5QrCode || !isCameraScanning || isTogglingTorch) return;
+      isTogglingTorch = true;
+      try {
+        const nextState = !isTorchOn;
+        const ok = await setTorchState(nextState);
+        if (ok) {
+          isTorchOn = nextState;
+          updateTorchUi(isTorchOn);
+        } else {
+          isTorchOn = false;
+          updateTorchUi(false);
+          const msg = IS_IOS
+            ? 'iPhone Safari chưa hỗ trợ bật Flash từ web. Hãy vuốt Trung tâm điều khiển để bật Đèn pin.'
+            : 'Thiết bị hoặc trình duyệt này chưa hỗ trợ đèn Flash qua web';
+          showToast(msg, true);
+        }
+      } finally {
+        isTogglingTorch = false;
       }
     }
 
@@ -2170,13 +2272,20 @@
           isTorchOn = false;
           updateTorchUi(false);
         }
-        await html5QrCode.stop();
-        try { html5QrCode.clear(); } catch (e) {}
-        html5QrCode = null;
+        const scanner = html5QrCode;
+        await scanner.stop();
+        try { scanner.clear(); } catch (e) {}
+        if (html5QrCode === scanner) html5QrCode = null;
         isCameraScanning = false;
-        setTimeout(() => {
+        if (!isScannerOpen) {
           isSwitchingCamera = false;
-          startCameraWithId(nextCamera.id, isFrontCam);
+          return;
+        }
+        if (switchCameraTimer) clearTimeout(switchCameraTimer);
+        switchCameraTimer = setTimeout(() => {
+          switchCameraTimer = null;
+          isSwitchingCamera = false;
+          if (isScannerOpen) startCameraWithId(nextCamera.id, isFrontCam);
         }, 120);
       } catch (e) {
         isSwitchingCamera = false;
@@ -2265,12 +2374,17 @@
         clearTimeout(torchCheckTimer);
         torchCheckTimer = null;
       }
+      if (switchCameraTimer) {
+        clearTimeout(switchCameraTimer);
+        switchCameraTimer = null;
+      }
 
       try {
         if (isTorchOn && html5QrCode && isCameraScanning) {
           await setTorchState(false);
         }
         isTorchOn = false;
+        isTogglingTorch = false;
         updateTorchUi(false);
 
         const torchBtn = document.getElementById('btn-torch');
@@ -2299,7 +2413,9 @@
             scanner.clear();
           } catch (e) {}
         }
+        stopLeftoverVideoTracks();
 
+        document.body.style.overflow = '';
         document.getElementById('scanner-overlay').style.display = 'none';
         document.getElementById('scan-result-card').style.display = 'none';
         isScanPaused = false;
@@ -2311,6 +2427,9 @@
         isClosingScanner = false;
       }
     }
+
+    window.addEventListener('resize', handleScannerViewportResize);
+    window.addEventListener('orientationchange', () => setTimeout(handleScannerViewportResize, 120));
 
     // Tự động tắt Flash khi người dùng chuyển app / khóa màn hình
     document.addEventListener('visibilitychange', () => {

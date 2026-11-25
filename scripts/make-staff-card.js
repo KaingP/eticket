@@ -14,22 +14,21 @@ const OUT_FILE = path.join(DOCS_DIR, 'huong-dan-nhan-vien.html');
 
 function getPrimaryIp() {
   const interfaces = os.networkInterfaces();
-  const validIps = [];
+  const ips = [];
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
       if (iface.family === 'IPv4' && !iface.internal) {
         const ip = iface.address;
         if (!ip.startsWith('169.254.')) {
-          if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) {
-            validIps.unshift(ip);
-          } else {
-            validIps.push(ip);
-          }
+          ips.push(ip);
         }
       }
     }
   }
-  return validIps.length > 0 ? validIps[0] : '192.168.1.10';
+  const preferred192 = ips.find(ip => ip.startsWith('192.168.') && !ip.startsWith('192.168.56.'));
+  if (preferred192) return preferred192;
+  const anyLan = ips.find(ip => ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.'));
+  return anyLan || ips[0] || '192.168.1.10';
 }
 
 async function generateStaffCard() {

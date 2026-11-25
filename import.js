@@ -115,7 +115,9 @@ function importTicketsData(rawContent, filename = '') {
     throw new Error('Dữ liệu rỗng');
   }
 
-  const isCsv = filename.toLowerCase().endsWith('.csv') || rawContent.trim().startsWith('Mã vé') || rawContent.trim().startsWith('ticketCode') || rawContent.trim().startsWith('STT');
+  const trimmed = rawContent.replace(/^\uFEFF/, '').trim();
+  const isCsv = filename.toLowerCase().endsWith('.csv') ||
+    (!filename.toLowerCase().endsWith('.json') && !trimmed.startsWith('{') && !trimmed.startsWith('['));
   let ticketsList = [];
 
   if (isCsv) {
@@ -126,19 +128,30 @@ function importTicketsData(rawContent, filename = '') {
 
     const headers = csvRows[0].map(h => h.trim().toLowerCase());
     
-    // Tìm index của các cột phổ biến
-    const findIndex = (names) => headers.findIndex(h => names.some(n => h === n.toLowerCase() || h.includes(n.toLowerCase())));
+    // Tìm index của các cột phổ biến (ưu tiên khớp chính xác toàn tên cột trước khớp chuỗi con)
+    const findIndex = (names) => {
+      for (const n of names) {
+        const exactIdx = headers.findIndex(h => h === n.toLowerCase());
+        if (exactIdx !== -1) return exactIdx;
+      }
+      for (const n of names) {
+        const partialIdx = headers.findIndex(h => h.includes(n.toLowerCase()));
+        if (partialIdx !== -1) return partialIdx;
+      }
+      return -1;
+    };
 
-    const codeIdx = findIndex(['mã vé', 'ticketcode', 'code', 'mã']);
-    const nameIdx = findIndex(['họ tên', 'tên khách hàng', 'tên', 'customername', 'name']);
+    const codeIdx = findIndex(['mã vé', 'ticketcode', 'ticket_code', 'code', 'mã']);
+    const nameIdx = findIndex(['họ tên', 'tên khách hàng', 'customername', 'tên', 'name']);
     const phoneIdx = findIndex(['số điện thoại', 'sđt', 'phone', 'điện thoại']);
     const emailIdx = findIndex(['email', 'thư điện tử']);
-    const orderIdIdx = findIndex(['mã đơn hàng', 'orderid', 'đơn hàng']);
+    const orderIdIdx = findIndex(['mã đơn hàng', 'orderid', 'order_id', 'đơn hàng']);
     const labelIdx = findIndex(['số thứ tự vé', 'số lượng vé', 'ticketlabel', 'label', 'vé số']);
     const typeIdx = findIndex(['loại vé', 'tickettypename', 'type']);
     const statusIdx = findIndex(['trạng thái', 'status']);
     const checkedInIdx = findIndex(['đã check-in', 'đã soát', 'checkedin', 'checked_in']);
     const checkedAtIdx = findIndex(['thời gian check-in', 'thời điểm check in', 'checkedinat', 'checked_at']);
+    const gateIdx = findIndex(['cổng soát vé', 'cổng vào', 'cổng', 'gate']);
     const issuedAtIdx = findIndex(['thời điểm mua vé', 'thời gian mua vé', 'issuedat', 'purchasetime', 'ngày mua']);
     const noteIdx = findIndex(['ghi chú', 'note', 'voucher']);
 
@@ -165,6 +178,7 @@ function importTicketsData(rawContent, filename = '') {
         status: statusIdx !== -1 ? (row[statusIdx] || 'VALID').trim().toUpperCase() : 'VALID',
         checkedIn: isChecked,
         checkedInAt: checkedAtIdx !== -1 && isChecked ? row[checkedAtIdx] : null,
+        gate: gateIdx !== -1 && isChecked ? (row[gateIdx] || null) : null,
         issuedAt: issuedAtIdx !== -1 ? row[issuedAtIdx] : null,
         note: noteIdx !== -1 ? row[noteIdx] : ''
       });
@@ -215,7 +229,7 @@ function importTicketsData(rawContent, filename = '') {
       checked_at = CASE WHEN tickets.checked_in = 1 THEN tickets.checked_at ELSE excluded.checked_at END,
       gate = CASE WHEN tickets.checked_in = 1 THEN tickets.gate ELSE excluded.gate END,
       issued_at = COALESCE(excluded.issued_at, tickets.issued_at),
-      note = COALESCE(excluded.note, tickets.note),
+      note = CASE WHEN excluded.note IS NOT NULL AND excluded.note != '' THEN excluded.note ELSE tickets.note END,
       raw_json = excluded.raw_json
   `);
 
