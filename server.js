@@ -18,8 +18,10 @@ const { importTicketsData } = require('./import');
 
 // Biến môi trường
 const PORT = parseInt(process.env.PORT || '443', 10);
+const EXPLICIT_PORT = Boolean(process.env.PORT);
 const HTTP_PORT = parseInt(process.env.HTTP_PORT || '80', 10);
 const ADMIN_PIN = process.env.ADMIN_PIN || '123456';
+let activePort = PORT;
 
 const BACKUP_DIR = path.join(DATA_DIR, 'backup');
 const CERTS_DIR = path.join(__dirname, 'certs');
@@ -103,6 +105,91 @@ function getPrimaryIp() {
   return anyLan || ips[0] || '127.0.0.1';
 }
 
+function generateSelfSignedCertNode(primaryIp, ipList, dnsList) {
+  const derLen = (len) => {
+    if (len < 128) return Buffer.from([len]);
+    const bytes = [];
+    let n = len;
+    while (n > 0) { bytes.unshift(n & 0xff); n >>>= 8; }
+    return Buffer.from([0x80 | bytes.length, ...bytes]);
+  };
+  const derTlv = (tag, content) => {
+    const buf = Buffer.isBuffer(content) ? content : Buffer.concat(content);
+    return Buffer.concat([Buffer.from([tag]), derLen(buf.length), buf]);
+  };
+  const derInt = (buf) => {
+    let b = Buffer.isBuffer(buf) ? buf : Buffer.from([buf]);
+    while (b.length > 1 && b[0] === 0 && !(b[1] & 0x80)) b = b.slice(1);
+    if (b[0] & 0x80) b = Buffer.concat([Buffer.from([0x00]), b]);
+    return derTlv(0x02, b);
+  };
+  const derBitString = (buf) => derTlv(0x03, Buffer.concat([Buffer.from([0x00]), buf]));
+  const derOid = (bytes) => derTlv(0x06, Buffer.from(bytes));
+  const derSeq = (items) => derTlv(0x30, items);
+  const derSet = (items) => derTlv(0x31, items);
+  const derUtf8 = (str) => derTlv(0x0C, Buffer.from(str, 'utf8'));
+  const derUtcTime = (d) => {
+    const pad = (n) => String(n).padStart(2, '0');
+    const yy = String(d.getUTCFullYear()).slice(-2);
+    const s = yy + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds()) + 'Z';
+    return derTlv(0x17, Buffer.from(s, 'ascii'));
+  };
+
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const spkiDer = publicKey.export({ type: 'spki', format: 'der' });
+  const keyPem = privateKey.export({ type: 'pkcs8', format: 'pem' });
+
+  const sigAlg = derSeq([derOid([0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0B]), derTlv(0x05, Buffer.alloc(0))]);
+  const rdn = (oid, val) => derSet([derSeq([derOid(oid), derUtf8(val)])]);
+  const name = derSeq([rdn([0x55, 0x04, 0x06], 'VN'), rdn([0x55, 0x04, 0x0A], 'Hung Vuong Concert'), rdn([0x55, 0x04, 0x03], primaryIp)]);
+
+  const now = new Date();
+  const later = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+  const validity = derSeq([derUtcTime(now), derUtcTime(later)]);
+
+  const sanEntries = [];
+  for (const ip of ipList) {
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) {
+      sanEntries.push(derTlv(0x87, Buffer.from(ip.split('.').map(Number))));
+    }
+  }
+  for (const dns of dnsList) {
+    if (dns) sanEntries.push(derTlv(0x82, Buffer.from(dns, 'ascii')));
+  }
+
+  const extKeyUsageVal = derSeq([derOid([0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x03, 0x01])]);
+  const keyUsageBitStr = derTlv(0x03, Buffer.from([0x05, 0xA0]));
+  const exts = derSeq([
+    derSeq([derOid([0x55, 0x1D, 0x0F]), Buffer.from([0x01, 0x01, 0xFF]), derTlv(0x04, keyUsageBitStr)]),
+    derSeq([derOid([0x55, 0x1D, 0x25]), derTlv(0x04, extKeyUsageVal)]),
+    derSeq([derOid([0x55, 0x1D, 0x11]), derTlv(0x04, derSeq(sanEntries))])
+  ]);
+
+  const serial = crypto.randomBytes(16);
+  serial[0] &= 0x7F;
+  if (serial[0] === 0) serial[0] = 0x01;
+
+  const tbs = derSeq([
+    derTlv(0xA0, derInt(Buffer.from([0x02]))),
+    derInt(serial),
+    sigAlg,
+    name,
+    validity,
+    name,
+    spkiDer,
+    derTlv(0xA3, exts)
+  ]);
+
+  const signer = crypto.createSign('SHA256');
+  signer.update(tbs);
+  const sig = signer.sign(privateKey);
+
+  const certDer = derSeq([tbs, sigAlg, derBitString(sig)]);
+  const b64 = certDer.toString('base64').match(/.{1,64}/g).join('\n');
+  const certPem = `-----BEGIN CERTIFICATE-----\n${b64}\n-----END CERTIFICATE-----\n`;
+  return { certPem, keyPem };
+}
+
 // Tự động kiểm tra và sinh chứng chỉ SSL phù hợp với IP hiện tại
 function ensureSslCert(primaryIp, allIps) {
   let needsGen = false;
@@ -148,6 +235,7 @@ function ensureSslCert(primaryIp, allIps) {
     }
 
     try {
+      const tempCnf = path.join(CERTS_DIR, 'temp_openssl.cnf');
       if (!fs.existsSync(CERTS_DIR)) {
         fs.mkdirSync(CERTS_DIR, { recursive: true });
       }
@@ -191,7 +279,6 @@ subjectAltName = @alt_names
 [alt_names]
 ${altNames.join('\n')}
 `;
-      const tempCnf = path.join(CERTS_DIR, 'temp_openssl.cnf');
       fs.writeFileSync(tempCnf, cnfContent, 'utf8');
       execSync(`${opensslCmd} req -x509 -nodes -days 365 -newkey rsa:2048 -keyout "${KEY_PATH}" -out "${CERT_PATH}" -config "${tempCnf}"`, { stdio: 'pipe' });
       try { fs.unlinkSync(tempCnf); } catch (e) { /* file tạm, không quan trọng */ }
@@ -199,9 +286,24 @@ ${altNames.join('\n')}
       console.log(`[!] Điện thoại nhân viên đã kết nối trước đó cần QUÉT LẠI mã QR bên dưới`);
       console.log(`    và chấp nhận cảnh báo chứng chỉ một lần nữa.\n`);
     } catch (err) {
-      const detail = (err.stderr && err.stderr.toString().trim()) || err.message;
-      console.error(`[!] KHÔNG TẠO ĐƯỢC CHỨNG CHỈ SSL (${reason}): ${detail}`);
-      console.error(`[!] Kiểm tra OpenSSL đã được cài đặt (Git for Windows có sẵn OpenSSL).`);
+      try {
+        const tempCnf = path.join(CERTS_DIR, 'temp_openssl.cnf');
+        if (fs.existsSync(tempCnf)) fs.unlinkSync(tempCnf);
+      } catch (e) {}
+      // Máy tính mới không cài sẵn OpenSSL -> tự sinh bằng Node.js crypto thuần (không cần phụ thuộc ngoài)
+      try {
+        const uniqueIps = Array.from(new Set([primaryIp, '192.168.1.10', '192.168.137.1', '127.0.0.1', ...allIps]));
+        const hostLower = os.hostname().toLowerCase();
+        const uniqueDns = Array.from(new Set(['localhost', 'soatve.local', `${hostLower}.local`, hostLower]));
+        const { certPem, keyPem } = generateSelfSignedCertNode(primaryIp, uniqueIps, uniqueDns);
+        fs.writeFileSync(KEY_PATH, keyPem, 'utf8');
+        fs.writeFileSync(CERT_PATH, certPem, 'utf8');
+        console.log(`\n[!] ĐÃ TẠO CHỨNG CHỈ SSL MỚI (Node.js) cho IP ${primaryIp} - Lý do: ${reason}`);
+        console.log(`[!] Điện thoại nhân viên cần QUÉT LẠI mã QR và chấp nhận cảnh báo chứng chỉ 1 lần.\n`);
+      } catch (nodeErr) {
+        const detail = (err.stderr && err.stderr.toString().trim()) || err.message;
+        console.error(`[!] KHÔNG TẠO ĐƯỢC CHỨNG CHỈ SSL (${reason}): ${detail} / ${nodeErr.message}`);
+      }
     }
   }
 }
@@ -733,7 +835,7 @@ app.get('/api/admin/tickets', (req, res) => {
 app.get('/api/system-info', async (req, res) => {
   const primaryIp = getPrimaryIp();
   const allIps = getLanIps();
-  const portPart = PORT === 443 ? '' : `:${PORT}`;
+  const portPart = activePort === 443 ? '' : `:${activePort}`;
   const primaryUrl = `https://${primaryIp}${portPart}`;
 
   try {
@@ -746,7 +848,7 @@ app.get('/api/system-info', async (req, res) => {
     res.json({
       primaryIp,
       primaryUrl,
-      port: PORT,
+      port: activePort,
       allIps,
       hostname: os.hostname(),
       qrDataUrl
@@ -759,7 +861,7 @@ app.get('/api/system-info', async (req, res) => {
 // 13. Trang QR to toàn màn hình để nhân viên quét trực tiếp
 app.get('/qr', async (req, res) => {
   const primaryIp = getPrimaryIp();
-  const portPart = PORT === 443 ? '' : `:${PORT}`;
+  const portPart = activePort === 443 ? '' : `:${activePort}`;
   const primaryUrl = `https://${primaryIp}${portPart}`;
   const adminUrl = `https://${primaryIp}${portPart}/admin.html`;
 
@@ -990,60 +1092,91 @@ async function startServer() {
     process.exit(1);
   }
 
-  const httpsServer = https.createServer(sslOptions, app);
-  runningServers.push(httpsServer);
-  httpsServer.on('error', (e) => {
+  function bindHttpsWithFallback(candidates, idx = 0) {
+    return new Promise((resolve, reject) => {
+      if (idx >= candidates.length) {
+        return reject(new Error('ALL_PORTS_FAILED'));
+      }
+      const tryPort = candidates[idx];
+      const server = https.createServer(sslOptions, app);
+
+      server.once('error', (err) => {
+        if ((err.code === 'EADDRINUSE' || err.code === 'EACCES') && idx + 1 < candidates.length) {
+          const nextLabel = candidates[idx + 1] === 0 ? 'ngẫu nhiên' : candidates[idx + 1];
+          console.log(`[!] Cổng HTTPS ${tryPort} không khả dụng (${err.code}), tự động thử cổng ${nextLabel}...`);
+          bindHttpsWithFallback(candidates, idx + 1).then(resolve).catch(reject);
+        } else {
+          reject(err);
+        }
+      });
+
+      server.listen(tryPort, '0.0.0.0', () => {
+        resolve(server);
+      });
+    });
+  }
+
+  const candidatePorts = EXPLICIT_PORT ? [PORT] : [PORT, 8443, 9443, 3443, 0];
+  let httpsServer;
+  try {
+    httpsServer = await bindHttpsWithFallback(candidatePorts);
+  } catch (e) {
     console.error(`[!] KHÔNG MỞ ĐƯỢC CỔNG HTTPS ${PORT}: ${e.message}`);
     if (e.code === 'EADDRINUSE') console.error(`[!] Có thể server đang chạy ở cửa sổ khác. Hãy tắt cửa sổ đó rồi chạy lại.`);
     if (e.code === 'EACCES') console.error(`[!] Cần chạy với quyền Administrator/sudo để dùng cổng ${PORT}, hoặc đặt PORT=8443.`);
-    shutdown(1);
+    return shutdown(1);
+  }
+
+  runningServers.push(httpsServer);
+  httpsServer.on('error', (e) => {
+    console.error(`[!] Lỗi HTTPS Server: ${e.message}`);
   });
 
-  httpsServer.listen(PORT, '0.0.0.0', async () => {
-    const portPart = PORT === 443 ? '' : `:${PORT}`;
-    const primaryUrl = `https://${primaryIp}${portPart}`;
-    const qrPageUrl = `https://${primaryIp}${portPart}/qr`;
+  activePort = httpsServer.address().port;
+  const portPart = activePort === 443 ? '' : `:${activePort}`;
+  const primaryUrl = `https://${primaryIp}${portPart}`;
+  const qrPageUrl = `https://${primaryIp}${portPart}/qr`;
 
-    console.log(`\n=====================================================================`);
-    console.log(`🎉 HÙNG VƯƠNG CONCERT: GAME ON - CỔNG SOÁT VÉ LAN ĐÃ SẴN SÀNG!`);
-    console.log(`=====================================================================`);
-    console.log(`[📶 MẠNG LAN TỰ ĐỘNG - KHÔNG CẦN INTERNET, KHÔNG CẦN CÀI IP TĨNH]`);
-    console.log(`[*] IP Máy chủ phát hiện được: ${primaryIp}`);
-    console.log(`[*] Link Cổng Soát Vé:         ${primaryUrl}`);
-    console.log(`---------------------------------------------------------------------`);
-    console.log(`📱 MÃ QR DÀNH CHO ĐIỆN THOẠI NHÂN VIÊN (BẬT CAMERA QUÉT ĐỂ VÀO NGAY):`);
+  console.log(`\n=====================================================================`);
+  console.log(`🎉 HÙNG VƯƠNG CONCERT: GAME ON - CỔNG SOÁT VÉ LAN ĐÃ SẴN SÀNG!`);
+  console.log(`=====================================================================`);
+  console.log(`[📶 MẠNG LAN TỰ ĐỘNG - KHÔNG CẦN INTERNET, KHÔNG CẦN CÀI IP TĨNH]`);
+  if (activePort !== PORT) {
+    console.log(`[⚡] Đã tự động chuyển sang cổng HTTPS dự phòng: ${activePort}`);
+  }
+  console.log(`[*] IP Máy chủ phát hiện được: ${primaryIp}`);
+  console.log(`[*] Link Cổng Soát Vé:         ${primaryUrl}`);
+  console.log(`---------------------------------------------------------------------`);
+  console.log(`📱 MÃ QR DÀNH CHO ĐIỆN THOẠI NHÂN VIÊN (BẬT CAMERA QUÉT ĐỂ VÀO NGAY):`);
 
-    try {
-      const qrAscii = await QRCode.toString(primaryUrl, { type: 'terminal', small: true });
-      console.log(qrAscii);
-    } catch (e) {
-      console.log(`[QR Error]: Không render được QR terminal.`);
-    }
+  try {
+    const qrAscii = await QRCode.toString(primaryUrl, { type: 'terminal', small: true });
+    console.log(qrAscii);
+  } catch (e) {
+    console.log(`[QR Error]: Không render được QR terminal.`);
+  }
 
-    console.log(`👉 Nhân viên chỉ cần mở Camera điện thoại quét mã QR ở trên để vào!`);
-    console.log(`👉 Hoặc mở màn hình chia sẻ QR to: ${qrPageUrl}`);
-    if (allIps.length > 1) {
-      console.log(`[*] Các IP phụ khác trên máy: ${allIps.join(', ')}`);
-    }
-    console.log(`=====================================================================\n`);
-  });
+  console.log(`👉 Nhân viên chỉ cần mở Camera điện thoại quét mã QR ở trên để vào!`);
+  console.log(`👉 Hoặc mở màn hình chia sẻ QR to: ${qrPageUrl}`);
+  if (allIps.length > 1) {
+    console.log(`[*] Các IP phụ khác trên máy: ${allIps.join(', ')}`);
+  }
+  console.log(`=====================================================================\n`);
 
   // Chuyển hướng HTTP sang HTTPS (nếu cổng 80 không bị chiếm)
-  if (PORT === 443) {
-    const httpApp = express();
-    httpApp.use((req, res) => {
-      const host = req.headers.host ? req.headers.host.split(':')[0] : primaryIp;
-      res.redirect(301, `https://${host}${req.url}`);
-    });
-    const httpServer = http.createServer(httpApp);
-    runningServers.push(httpServer);
-    httpServer.on('error', (e) => {
-      console.log(`[NOTE] Cổng HTTP 80 không khả dụng (${e.message}), truy cập trực tiếp bằng https://`);
-    });
-    httpServer.listen(HTTP_PORT, '0.0.0.0', () => {
-      console.log(`[+] HTTP Port 80 đang tự động chuyển hướng sang HTTPS.`);
-    });
-  }
+  const httpApp = express();
+  httpApp.use((req, res) => {
+    const host = req.headers.host ? req.headers.host.split(':')[0] : primaryIp;
+    res.redirect(301, `https://${host}${portPart}${req.url}`);
+  });
+  const httpServer = http.createServer(httpApp);
+  runningServers.push(httpServer);
+  httpServer.on('error', (e) => {
+    console.log(`[NOTE] Cổng HTTP 80 không khả dụng (${e.message}), truy cập trực tiếp bằng ${primaryUrl}`);
+  });
+  httpServer.listen(HTTP_PORT, '0.0.0.0', () => {
+    console.log(`[+] HTTP Port ${HTTP_PORT} đang tự động chuyển hướng sang ${primaryUrl}`);
+  });
 
   return { httpsServer };
 }
