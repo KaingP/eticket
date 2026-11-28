@@ -53,7 +53,7 @@ function normalizeStatus(val) {
   return s;
 }
 
-// Số điện thoại bị Excel/JSON lưu dạng số sẽ mất số 0 đầu (868037559 -> 0868037559)
+// Số điện thoại bị Excel/JSON lưu dạng số sẽ mất số 0 đầu (912345678 -> 0912345678)
 function normalizePhone(val) {
   const s = toStr(val);
   if (/^[1-9]\d{8}$/.test(s)) return '0' + s;

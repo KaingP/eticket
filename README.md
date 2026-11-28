@@ -2,6 +2,16 @@
 
 > **Đặc tả hệ thống:** Giao diện **Cổng soát vé** chuẩn nhận diện Đỏ Crimson `#AF1C2B` & Hồng Blush `#FCF1F2` • Chạy hoàn toàn **Offline trong mạng LAN** • **Không cần cài đặt IP tĩnh** • Hỗ trợ quét QR tốc độ cao `30fps` kèm đèn **⚡ Flash** & tối ưu ổn định cho **iPhone Safari / Android Chrome**.
 
+**Phiên bản:** 1.1.0 — xem [CHANGELOG.md](CHANGELOG.md)
+
+### ✅ Checklist trước giờ mở cổng
+1. Trên laptop máy chủ: xóa `data/tickets.db*` và `data/backup/` nếu còn dữ liệu chạy thử.
+2. Chạy `start.bat` (Windows) hoặc `./start.sh` (macOS/Linux).
+3. Bấm **"Nhập danh sách"** trên trang chính → chọn file vé thật xuất từ PayOS (`.json` / `.csv`), kiểm tra số vé trên Dashboard.
+4. Đặt mã PIN quản trị riêng bằng biến môi trường `ADMIN_PIN` (không dùng mặc định `123456`). Windows: mở CMD trong thư mục dự án, gõ `set ADMIN_PIN=<mã của bạn>` rồi chạy `start.bat` ngay trong cửa sổ đó.
+5. Nhân viên kết nối Wi-Fi sự kiện, quét mã QR trên màn hình máy chủ, chấp nhận cảnh báo chứng chỉ, thử quét 1 vé.
+6. Nếu đổi modem / bật Hotspot: khởi động lại server, nhân viên quét lại QR mới.
+
 ---
 
 ## MỤC LỤC

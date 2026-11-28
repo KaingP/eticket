@@ -192,7 +192,7 @@ async function runTier2CDP(binPath) {
         all: 5, checked: 2, unchecked: 3, total: 5, totalAll: 5, remaining: 3,
         by_gate: { 'Cổng chính': 2 },
         recent_scans: [
-          { at: '2026-11-25T00:31:44+07:00', code: 'HVC-K2MJ8D-U754', name: 'Nguyễn Đức Trung', gate: 'Cổng chính', result: 'OK' }
+          { at: '2026-11-25T00:31:44+07:00', code: 'HVC-K2MJ8D-U754', name: 'Nguyễn Hoàng Nam', gate: 'Cổng chính', result: 'OK' }
         ]
       });
     });
@@ -204,11 +204,11 @@ async function runTier2CDP(binPath) {
         limit: 8,
         totalPages: 1,
         tickets: [
-          { stt: 1, code: 'HVC-K2MJ8D-U754', name: 'Nguyễn Đức Trung', email: 'dctrng.work@gmail.com', issuedAt: '2026-11-09T11:10:25+07:00', label: 'Vé 1/2', checkedIn: 1, checkedAt: '2026-11-25T00:31:44+07:00', note: 'voucher' },
-          { stt: 2, code: 'HVC-6CJZG2-EE5C', name: 'Lê Phạm Gia Hân', email: 'giahan.lepham@gmail.com', issuedAt: '2026-11-11T09:20:45+07:00', label: 'Vé 1/1', checkedIn: 1, checkedAt: '2026-11-14T18:05:30+07:00', note: 'khách VIP' },
-          { stt: 3, code: 'HVC-K4YGBF-70EB', name: 'Nguyễn Hoàng Bảo Thy', email: 'bbaothy2204@gmail.com', issuedAt: '2026-11-05T21:19:08+07:00', label: 'Vé 1/1', checkedIn: 0, checkedAt: null, note: 'voucher nước' },
-          { stt: 4, code: 'HVC-50P368-F4F8', name: 'Nguyễn Đức Trung', email: 'dctrng.work@gmail.com', issuedAt: '2026-11-09T11:10:25+07:00', label: 'Vé 2/2', checkedIn: 0, checkedAt: null, note: 'quà tặng áo' },
-          { stt: 5, code: 'HVC-5NS9YA-B711', name: 'Trần Minh Khôi', email: 'minhkhoi.tran26@gmail.com', issuedAt: '2026-11-10T14:35:12+07:00', label: 'Vé 1/1', checkedIn: 0, checkedAt: null, note: '' }
+          { stt: 1, code: 'HVC-K2MJ8D-U754', name: 'Nguyễn Hoàng Nam', email: 'nam.nh@example.com', issuedAt: '2026-11-09T11:10:25+07:00', label: 'Vé 1/2', checkedIn: 1, checkedAt: '2026-11-25T00:31:44+07:00', note: 'voucher' },
+          { stt: 2, code: 'HVC-6CJZG2-EE5C', name: 'Lê Văn Hùng', email: 'hung.lv@example.com', issuedAt: '2026-11-11T09:20:45+07:00', label: 'Vé 1/1', checkedIn: 1, checkedAt: '2026-11-14T18:05:30+07:00', note: 'khách VIP' },
+          { stt: 3, code: 'HVC-K4YGBF-70EB', name: 'Trần Thị Mai', email: 'mai.tt@example.com', issuedAt: '2026-11-05T21:19:08+07:00', label: 'Vé 1/1', checkedIn: 0, checkedAt: null, note: 'voucher nước' },
+          { stt: 4, code: 'HVC-50P368-F4F8', name: 'Nguyễn Hoàng Nam', email: 'nam.nh@example.com', issuedAt: '2026-11-09T11:10:25+07:00', label: 'Vé 2/2', checkedIn: 0, checkedAt: null, note: 'quà tặng áo' },
+          { stt: 5, code: 'HVC-5NS9YA-B711', name: 'Phạm Quốc Tuấn', email: 'tuan.pq@example.com', issuedAt: '2026-11-10T14:35:12+07:00', label: 'Vé 1/1', checkedIn: 0, checkedAt: null, note: '' }
         ]
       });
     });
@@ -217,8 +217,8 @@ async function runTier2CDP(binPath) {
       res.json({
         total: 2,
         items: [
-          { code: 'HVC-K2MJ8D-U754', name: 'Nguyễn Đức Trung', phone: '0868037559', order_id: 'ORD-739734074', label: 'Vé 1/2', type: 'Vé Điện Tử', status: 'VALID', checked_in: 1, gate: 'Cổng chính', checked_at: '2026-11-25T00:31:44+07:00', note: 'voucher' },
-          { code: 'HVC-50P368-F4F8', name: 'Nguyễn Đức Trung', phone: '0868037559', order_id: 'ORD-739734074', label: 'Vé 2/2', type: 'Vé Điện Tử', status: 'VALID', checked_in: 0, gate: null, checked_at: null, note: 'quà tặng áo' }
+          { code: 'HVC-K2MJ8D-U754', name: 'Nguyễn Hoàng Nam', phone: '0912345678', order_id: 'ORD-000000001', label: 'Vé 1/2', type: 'Vé Điện Tử', status: 'VALID', checked_in: 1, gate: 'Cổng chính', checked_at: '2026-11-25T00:31:44+07:00', note: 'voucher' },
+          { code: 'HVC-50P368-F4F8', name: 'Nguyễn Hoàng Nam', phone: '0912345678', order_id: 'ORD-000000001', label: 'Vé 2/2', type: 'Vé Điện Tử', status: 'VALID', checked_in: 0, gate: null, checked_at: null, note: 'quà tặng áo' }
         ]
       });
     });
@@ -230,11 +230,11 @@ async function runTier2CDP(binPath) {
     app.get('/api/tickets/:code', (req, res) => {
       res.json({
         code: req.params.code,
-        name: 'Nguyễn Đức Trung',
-        email: 'dctrng.work@gmail.com',
-        phone: '0868037559',
+        name: 'Nguyễn Hoàng Nam',
+        email: 'nam.nh@example.com',
+        phone: '0912345678',
         issuedAt: '2026-11-09T11:10:25+07:00',
-        orderId: 'ORD-739734074',
+        orderId: 'ORD-000000001',
         paymentInfo: 'PAYOS_AUTO',
         label: 'Vé 1/2',
         type: 'Vé Điện Tử (Player Pass QR)',
@@ -255,7 +255,7 @@ async function runTier2CDP(binPath) {
           status: 'OK',
           valid: true,
           code,
-          name: 'Nguyễn Hoàng Bảo Thy',
+          name: 'Trần Thị Mai',
           label: 'Vé 1/1',
           note: 'voucher nước',
           message: 'Thành công!'

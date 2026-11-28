@@ -86,14 +86,14 @@ async function run() {
   // ---------------------------------------------------------------
   console.log('\n[F2] Import CSV từ Excel tiếng Việt (dấu chấm phẩy ;)...');
   const semicolonCsv = '﻿Mã vé;Họ tên;Số điện thoại;Trạng thái;Đã check-in;Ghi chú\r\n' +
-    'HVC-SEMI-001;Nguyễn Văn Chấm;868037559;Hợp lệ;Chưa vào;voucher nước\r\n' +
+    'HVC-SEMI-001;Nguyễn Văn Chấm;987654321;Hợp lệ;Chưa vào;voucher nước\r\n' +
     'HVC-SEMI-002;Trần Phẩy;0901111222;CANCELLED;;\r\n';
   const r2 = importTicketsData(semicolonCsv, 'excel.csv');
   assert(r2.countTotal === 2, 'CSV dùng dấu ; đọc đúng 2 vé');
   const semi1 = get('HVC-SEMI-001');
   assert(semi1 && semi1.name === 'Nguyễn Văn Chấm' && semi1.note === 'voucher nước', 'Tách cột đúng với dấu ;');
   assert(semi1.status === 'VALID' && semi1.checked_in === 0, '"Hợp lệ" -> VALID, "Chưa vào" -> chưa soát');
-  assert(semi1.phone === '0868037559', 'SĐT bị Excel cắt số 0 được khôi phục');
+  assert(semi1.phone === '0987654321', 'SĐT bị Excel cắt số 0 được khôi phục');
 
   // ---------------------------------------------------------------
   const server = http.createServer(app);
