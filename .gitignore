@@ -10,3 +10,7 @@ data/temp_*
 *.log
 .DS_Store
 Thumbs.db
+data/test-qr-print.html
+
+# Chứng chỉ SSL tự sinh theo IP LAN khi chạy server - KHÔNG commit private key
+certs/

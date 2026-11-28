@@ -9,7 +9,8 @@ const QRCode = require('qrcode');
 
 const ROOT_DIR = fs.existsSync(path.join(__dirname, 'server.js')) ? __dirname : path.resolve(__dirname, '..');
 const DATA_DIR = path.join(ROOT_DIR, 'data');
-const TICKETS_FILE = path.join(DATA_DIR, 'tickets.json');
+// Mặc định dùng dữ liệu giả lập của bộ test; có thể truyền file khác: node scripts/make-test-qr.js <file.json>
+const TICKETS_FILE = process.argv[2] ? path.resolve(process.argv[2]) : path.join(ROOT_DIR, 'tests', 'fixtures', 'tickets.json');
 const QR_OUT_DIR = path.join(DATA_DIR, 'test_qrs');
 const HTML_OUT_FILE = path.join(DATA_DIR, 'test-qr-print.html');
 const PUBLIC_HTML_OUT = path.join(ROOT_DIR, 'public', 'test-qr.html');
@@ -23,8 +24,7 @@ async function generateTestQrs() {
   console.log(`[*] Đang tạo mã QR kiểm thử...`);
 
   let tickets = {};
-  const samplePath = path.join(ROOT_DIR, 'tickets_sample.json');
-  const targetJsonPath = fs.existsSync(samplePath) ? samplePath : TICKETS_FILE;
+  const targetJsonPath = TICKETS_FILE;
 
   if (fs.existsSync(targetJsonPath)) {
     console.log(`[*] Đọc vé mẫu từ: ${targetJsonPath}`);

@@ -31,13 +31,11 @@ if not exist "node_modules\" (
     echo.
 )
 
-:: 3. Nhap du lieu ve mau neu database chua ton tai
+:: 3. Nhac nhap danh sach ve neu database chua ton tai
 if not exist "data\tickets.db" (
-    if exist "tickets_sample.json" (
-        echo [*] Dang khoi tao CSDL tu tickets_sample.json...
-        call node import.js tickets_sample.json
-        echo.
-    )
+    echo [!] Chua co du lieu ve. Sau khi Server chay, bam nut "Nhap danh sach" tren
+    echo     trang chinh de nhap file ve that ^(.json / .csv^), hoac chay: node import.js ^<file^>
+    echo.
 )
 
 :: 4. Khoi chay Server

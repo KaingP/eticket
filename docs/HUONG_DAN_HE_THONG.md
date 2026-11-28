@@ -22,13 +22,13 @@ Tài liệu này là **bộ instruction vận hành và kỹ thuật chính th�
 ```text
 scanticket/
 ├── server.js                   # Máy chủ HTTPS/HTTP Express, API soát vé, SSL tự động, Auto Backup 5 phút
+├── db.js                       # Kết nối SQLite dùng chung (đổi đường dẫn bằng biến DB_PATH)
 ├── import.js                   # Module & CLI nhập vé từ JSON/CSV vào SQLite
 ├── export.js                   # Module & CLI xuất báo cáo JSON/CSV (có UTF-8 BOM + cột Ghi chú)
 ├── start.bat                   # Script khởi động 1-click trên Windows
 ├── start.sh                    # Script khởi động 1-click trên macOS / Linux
-├── tickets_sample.json         # Dữ liệu vé mẫu để chạy thử và kiểm thử
 ├── package.json                # Khai báo dependencies & npm scripts
-├── certs/
+├── certs/                      # (Không commit) Tự sinh khi chạy server theo IP LAN hiện tại
 │   ├── cert.pem                # Chứng chỉ SSL tự ký phục vụ HTTPS cho Camera
 │   └── key.pem                 # Khóa bí mật SSL
 ├── public/
@@ -45,12 +45,14 @@ scanticket/
 │   └── diagrams/               # Sơ đồ luồng nghiệp vụ và kiến trúc hệ thống
 ├── data/
 │   ├── tickets.db              # CSDL SQLite chính (tự tạo khi import/start)
-│   ├── tickets.json            # File dữ liệu vé chuẩn cho bộ test
 │   ├── backup/                 # Thư mục lưu tự động tối đa 20 bản sao lưu SQLite mỗi 5 phút
 │   ├── screenshots/            # Ảnh chụp giao diện xuất ra từ test_ui.js
 │   └── test_qrs/               # Ảnh QR mẫu phục vụ kiểm thử
 └── tests/
+    ├── setup-test-db.js        # Trỏ bộ test sang SQLite tạm, bảo vệ data/tickets.db thật
+    ├── fixtures/tickets.json   # Dữ liệu vé GIẢ LẬP dùng cho bộ test và make-qr
     ├── test.js                 # Bộ kiểm thử lõi (6 bài test nghiệp vụ, concurrency, offline)
+    ├── test_fixes.js           # Kiểm thử hồi quy: import PayOS, check-in tay, thống kê
     ├── test_drive_specs.js     # Bộ kiểm thử đối chiếu 4 sơ đồ đặc tả
     └── test_ui.js              # Bộ kiểm thử UI tĩnh + Headless Chromium CDP (bao gồm camera stream & Flash)
 ```
@@ -246,9 +248,16 @@ File CSV (UTF-8 hoặc UTF-8 BOM, phân tách dấu phẩy `,`, hỗ trợ chu�
 
 ### 6.2. Định dạng file Import JSON
 Hỗ trợ 3 cấu trúc JSON:
-1. Object chuẩn `{ "tickets": { "HVC-001": { ... }, ... } }` (giống `tickets_sample.json` và file xuất ra từ `export.js`).
+1. Object chuẩn `{ "tickets": { "HVC-001": { ... }, ... } }` (giống file xuất ra từ PayOS và từ `export.js`). Cũng nhận `{ "tickets": [ ... ] }` và `{ "data": [ ... ] }`.
 2. Mảng các đối tượng `[ { "ticketCode": "HVC-001", ... }, ... ]`.
 3. Map trực tiếp `{ "HVC-001": { ... }, ... }`.
+
+**Dữ liệu PayOS / Excel được tự chuẩn hóa khi import:**
+- Mã vé, SĐT, mã đơn dạng **số** được chuyển thành chuỗi; SĐT bị mất số `0` đầu (9 chữ số) được thêm lại.
+- `checkedIn` hiểu đúng `true/false`, `1/0`, `"true"/"false"`, `"Đã vào"/"Chưa vào"`.
+- `status` không phân biệt hoa thường; `Hợp lệ` → `VALID`, `Đã hủy` / `Hoàn tiền` / `CANCELED` → `CANCELLED`; để trống → `VALID`.
+- Phần tử `null` / sai kiểu / thiếu mã vé được bỏ qua thay vì làm hỏng cả file.
+- File CSV lưu từ Excel tiếng Việt dùng dấu chấm phẩy `;` được tự nhận diện.
 
 Các khóa hỗ trợ trên mỗi phần tử: `ticketCode`/`code`, `customerName`/`name`, `phone`, `email`, `orderId`/`order_id`, `ticketLabel`/`label`, `ticketTypeName`/`type`, `status`, `checkedIn`, `checkedInAt`, `gate`, `issuedAt`/`issued_at`, `note`/`notes`/`ghiChu`.
 
@@ -289,6 +298,7 @@ Chi tiết 3 tầng kiểm thử:
    - Vé cùng đơn hàng (`Vé 1/2` và `Vé 2/2`) check-in độc lập.
    - Kiểm tra tính toàn vẹn Export → Re-import.
    - Xác minh không chứa bất kỳ liên kết Internet/CDN nào.
+   - Toàn bộ bộ test chạy trên file SQLite tạm (`tests/setup-test-db.js`), **không** xóa dữ liệu thật trong `data/tickets.db`.
 2. **`npm run test:specs` (`tests/test_drive_specs.js`):**
    - Đối chiếu đầy đủ 4 sơ đồ luồng nghiệp vụ: Import CSV/JSON hợp lệ & lỗi, Dashboard, Soát QR + Note + lỗi, Check-in thủ công, Lọc danh sách, Chi tiết vé.
 3. **`npm run test:ui` (`tests/test_ui.js`):**

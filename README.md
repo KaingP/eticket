@@ -42,7 +42,7 @@
 - **Trên Windows:** Click đúp vào file **`start.bat`**.
   - Tự động kiểm tra Node.js.
   - Tự động cài đặt thư viện (`npm install --omit=dev`) nếu chưa có `node_modules`.
-  - Tự động nạp dữ liệu mẫu `tickets_sample.json` nếu chưa có `data/tickets.db`.
+  - Nếu chưa có `data/tickets.db` sẽ nhắc nhập file vé thật (hệ thống **không** kèm dữ liệu mẫu).
   - Tự động kiểm tra/cập nhật chứng chỉ SSL theo IP LAN, khởi chạy máy chủ và in **mã QR truy cập** ngay trên màn hình console.
 - **Trên macOS / Linux:**
   ```bash
@@ -55,7 +55,7 @@
 npm install
 
 # Bước 2: Nhập danh sách vé thật (CSV hoặc JSON)
-node import.js tickets_sample.json
+node import.js duong-dan/file-ve-payos.json
 
 # Bước 3: Khởi động Server soát vé
 npm start
@@ -135,14 +135,17 @@ New-NetFirewallRule -DisplayName "SoatVe_LAN_80" -Direction Inbound -Protocol TC
 | Lệnh NPM | Chức năng |
 | :--- | :--- |
 | `npm start` | Khởi chạy Server HTTPS (443) + HTTP redirect (80) |
-| `npm run import` | Nhập danh sách vé từ `tickets_sample.json` hoặc `data/tickets.json` |
+| `npm run import -- <file>` | Nhập danh sách vé thật từ file `.json` / `.csv` |
 | `npm run export` | Xuất báo cáo ra `data/tickets_export.json` & `data/tickets_export.csv` |
-| `npm run make-qr` | Tạo bộ mã QR mẫu (`data/test_qrs/`, `public/test-qr.html`) |
+| `npm run make-qr` | Tạo bộ mã QR mẫu từ dữ liệu giả `tests/fixtures/tickets.json` (`data/test_qrs/`, `public/test-qr.html`) |
 | `npm run make-card` | Tạo phiếu hướng dẫn in A4 (`docs/huong-dan-nhan-vien.html`) |
 | `npm test` | Chạy 6 bài test lõi (`tests/test.js`) |
 | `npm run test:specs` | Chạy kiểm thử theo 4 biểu đồ spec (`tests/test_drive_specs.js`) |
 | `npm run test:ui` | Chạy kiểm thử UI tĩnh + Headless Chromium CDP (`tests/test_ui.js`) |
-| `npm run test:all` | Chạy toàn bộ tất cả bộ kiểm thử (`test` + `test:specs` + `test:ui`) |
+| `npm run test:fixes` | Kiểm thử hồi quy: import dữ liệu PayOS lạ, check-in tay, thống kê (`tests/test_fixes.js`) |
+| `npm run test:all` | Chạy toàn bộ tất cả bộ kiểm thử (`test` + `test:specs` + `test:fixes` + `test:ui`) |
+
+> Bộ test luôn chạy trên **file SQLite tạm** (biến `DB_PATH`), không bao giờ đụng vào `data/tickets.db` thật — an toàn khi chạy ngay trên laptop máy chủ sự kiện.
 
 ---
 
