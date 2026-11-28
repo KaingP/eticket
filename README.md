@@ -4,6 +4,15 @@
 
 **Phiên bản:** 1.1.0 — xem [CHANGELOG.md](CHANGELOG.md)
 
+### 🧪 Chạy thử với dữ liệu mẫu
+Thư mục `samples/` có sẵn 40 vé **giả lập** (cùng cấu trúc file PayOS: 3 vé đã hủy, 2 vé đã soát sẵn, nhiều đơn 2–4 vé, ghi chú quà/voucher):
+- Nhập `samples/tickets_sample.json` hoặc `samples/tickets_sample.csv` bằng nút **"Nhập danh sách"**, hoặc
+- Tắt server, chép `samples/tickets_sample.db` thành `data/tickets.db` rồi chạy lại.
+- In QR để quét thử: `node scripts/make-test-qr.js samples/tickets_sample.json` rồi mở `/test-qr.html`.
+- Sinh lại / đổi số lượng vé: `npm run make-sample -- 120`.
+
+⚠️ Chạy thử xong nhớ xóa `data/tickets.db*` trước khi nhập danh sách thật.
+
 ### ✅ Checklist trước giờ mở cổng
 1. Trên laptop máy chủ: xóa `data/tickets.db*` và `data/backup/` nếu còn dữ liệu chạy thử.
 2. Chạy `start.bat` (Windows) hoặc `./start.sh` (macOS/Linux).
@@ -149,6 +158,7 @@ New-NetFirewallRule -DisplayName "SoatVe_LAN_80" -Direction Inbound -Protocol TC
 | `npm run export` | Xuất báo cáo ra `data/tickets_export.json` & `data/tickets_export.csv` |
 | `npm run make-qr` | Tạo bộ mã QR mẫu từ dữ liệu giả `tests/fixtures/tickets.json` (`data/test_qrs/`, `public/test-qr.html`) |
 | `npm run make-card` | Tạo phiếu hướng dẫn in A4 (`docs/huong-dan-nhan-vien.html`) |
+| `npm run make-sample` | Sinh dữ liệu vé **giả lập** để chạy thử: `samples/tickets_sample.json`, `.csv`, `.db` |
 | `npm test` | Chạy 6 bài test lõi (`tests/test.js`) |
 | `npm run test:specs` | Chạy kiểm thử theo 4 biểu đồ spec (`tests/test_drive_specs.js`) |
 | `npm run test:ui` | Chạy kiểm thử UI tĩnh + Headless Chromium CDP (`tests/test_ui.js`) |

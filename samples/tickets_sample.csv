@@ -1,0 +1,41 @@
+﻿Mã vé,Họ tên,Số điện thoại,Email,Mã đơn hàng,Số thứ tự vé,Loại vé,Trạng thái,Đã check-in,Thời gian check-in,Cổng soát vé,Thời điểm mua vé,Ghi chú
+HVC-WKECE0-MLXU,Lý Hoàng Hiếu,0908788741,hieu.ly1@example.com,ORD-100000001,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-18T15:27:45+07:00,voucher
+HVC-TE5S4H-VNEC,Lý Anh Giang,0944189699,giang.ly2@example.com,ORD-100000002,Vé 1/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-05T08:48:07+07:00,
+HVC-UUAWCV-68Q2,Lý Anh Giang,0944189699,giang.ly2@example.com,ORD-100000002,Vé 2/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-05T08:48:07+07:00,
+HVC-DPH613-Q8R3,Lý Thu Quân,0986706930,quan.ly3@example.com,ORD-100000003,Vé 1/1,Vé Điện Tử (Player Pass QR),CANCELLED,CHƯA VÀO,,,2026-11-08T17:03:54+07:00,Đã hoàn tiền
+HVC-AKXJPF-3U14,Nguyễn Thanh Khoa,0936358504,khoa.nguyen4@example.com,ORD-100000004,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-18T11:07:00+07:00,khách VIP
+HVC-WW8XAZ-1J7A,Nguyễn Hoàng Vy,0914913882,vy.nguyen5@example.com,ORD-100000005,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-20T18:35:24+07:00,khách VIP
+HVC-XJGBAF-HZN9,Hoàng Gia Khoa,0909259831,khoa.hoang6@example.com,ORD-100000006,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,ĐÃ VÀO,2026-11-28T18:05:12+07:00,Cổng A,2026-11-09T09:34:26+07:00,khách VIP
+HVC-PY0E4F-BL8M,Đặng Thanh Linh,0985561055,linh.dang7@example.com,ORD-100000007,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-19T16:07:41+07:00,quà tặng áo
+HVC-49N1B9-BT29,Ngô Ngọc Yến,0929225754,yen.ngo8@example.com,ORD-100000008,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-11T11:45:00+07:00,
+HVC-PC7P88-JQZ9,Huỳnh Đức Linh,0953676544,linh.huynh9@example.com,ORD-100000009,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-02T19:25:22+07:00,quà tặng áo
+HVC-BER8XD-RNTN,Phạm Thu Hân,0926412086,han.pham10@example.com,ORD-100000010,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-02T11:15:34+07:00,khách VIP
+HVC-18N586-CB6A,Lê Gia Giang,0954055828,giang.le11@example.com,ORD-100000011,Vé 1/2,Vé Điện Tử (Player Pass QR),CANCELLED,CHƯA VÀO,,,2026-11-16T16:10:31+07:00,Đã hoàn tiền
+HVC-NHURKK-DCPW,Lê Gia Giang,0954055828,giang.le11@example.com,ORD-100000011,Vé 2/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-16T16:10:31+07:00,khách VIP
+HVC-GC1M9N-PBKA,Vũ Minh Hà,0987662469,ha.vu12@example.com,ORD-100000012,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-17T14:30:02+07:00,
+HVC-0K5ZF5-RWSD,Đỗ Bảo Quân,0943102599,quan.do13@example.com,ORD-100000013,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,ĐÃ VÀO,2026-11-28T18:05:12+07:00,Cổng B,2026-11-04T17:47:11+07:00,khách VIP
+HVC-YPCZZS-RFFQ,Vũ Anh Giang,0963890911,giang.vu14@example.com,ORD-100000014,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-20T12:05:36+07:00,
+HVC-QZBHG3-MWKZ,Lê Phương Hùng,0903081487,hung.le15@example.com,ORD-100000015,Vé 1/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-01T16:24:27+07:00,voucher nước
+HVC-MURN61-3Z3V,Lê Phương Hùng,0903081487,hung.le15@example.com,ORD-100000015,Vé 2/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-01T16:24:27+07:00,khách VIP
+HVC-K2NJFH-TQB6,Huỳnh Khánh Nam,0964152560,nam.huynh16@example.com,ORD-100000016,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-16T09:56:14+07:00,
+HVC-NGPLYL-5VZ6,Võ Hoàng Dũng,0921575987,dung.vo17@example.com,ORD-100000017,Vé 1/1,Vé Điện Tử (Player Pass QR),CANCELLED,CHƯA VÀO,,,2026-11-11T09:49:19+07:00,Đã hoàn tiền
+HVC-3GAHY3-YUCP,Hoàng Phương Tuấn,0918257763,tuan.hoang18@example.com,ORD-100000018,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-05T11:45:44+07:00,
+HVC-G4CZ2X-X6Y0,Võ Văn An,0981499522,an.vo19@example.com,ORD-100000019,Vé 1/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-14T20:43:30+07:00,
+HVC-4PYHNE-2M4H,Võ Văn An,0981499522,an.vo19@example.com,ORD-100000019,Vé 2/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-14T20:43:30+07:00,voucher
+HVC-JQHGY6-8FJD,Lý Văn An,0994391749,an.ly20@example.com,ORD-100000020,Vé 1/3,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-09T16:18:07+07:00,
+HVC-U7XGWF-DTP7,Lý Văn An,0994391749,an.ly20@example.com,ORD-100000020,Vé 2/3,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-09T16:18:07+07:00,
+HVC-799KQ8-YARK,Lý Văn An,0994391749,an.ly20@example.com,ORD-100000020,Vé 3/3,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-09T16:18:07+07:00,
+HVC-N031Z1-TXJX,Phạm Văn Bình,0987215085,binh.pham21@example.com,ORD-100000021,Vé 1/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-08T13:04:50+07:00,voucher nước
+HVC-FX4WCC-DKSC,Phạm Văn Bình,0987215085,binh.pham21@example.com,ORD-100000021,Vé 2/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-08T13:04:50+07:00,quà tặng áo
+HVC-0HADPW-QTB6,Lê Văn Phúc,0905221076,phuc.le22@example.com,ORD-100000022,Vé 1/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-10T18:25:33+07:00,khách VIP
+HVC-PJD23H-5JZQ,Lê Văn Phúc,0905221076,phuc.le22@example.com,ORD-100000022,Vé 2/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-10T18:25:33+07:00,
+HVC-G6XH89-96M4,Đặng Văn Dũng,0931370211,dung.dang23@example.com,ORD-100000023,Vé 1/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-14T21:57:26+07:00,voucher
+HVC-4JLE1F-C74E,Đặng Văn Dũng,0931370211,dung.dang23@example.com,ORD-100000023,Vé 2/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-14T21:57:26+07:00,
+HVC-Y5CAW8-ZFFM,Phạm Thu Hùng,0933353184,hung.pham24@example.com,ORD-100000024,Vé 1/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-09T20:41:03+07:00,quà tặng áo
+HVC-DZH0E9-B6NA,Phạm Thu Hùng,0933353184,hung.pham24@example.com,ORD-100000024,Vé 2/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-09T20:41:03+07:00,
+HVC-063Z29-9D5T,Huỳnh Thu Giang,0990646625,giang.huynh25@example.com,ORD-100000025,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-10T15:40:41+07:00,quà tặng áo
+HVC-B1XE0V-MTB0,Vũ Hoàng Linh,0971100169,linh.vu26@example.com,ORD-100000026,Vé 1/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-13T08:34:53+07:00,quà tặng áo
+HVC-39LR4L-XMTF,Vũ Hoàng Linh,0971100169,linh.vu26@example.com,ORD-100000026,Vé 2/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-13T08:34:53+07:00,
+HVC-TMLQ6Y-X3WF,Dương Bảo Vy,0921224557,vy.duong27@example.com,ORD-100000027,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-02T16:20:41+07:00,
+HVC-ZYGPQE-QWLF,Phạm Anh Châu,0919223255,chau.pham28@example.com,ORD-100000028,Vé 1/1,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-09T09:57:29+07:00,
+HVC-62NMQ4-5SMP,Ngô Minh Hiếu,0998671210,hieu.ngo29@example.com,ORD-100000029,Vé 1/2,Vé Điện Tử (Player Pass QR),VALID,CHƯA VÀO,,,2026-11-03T21:31:58+07:00,khách VIP
