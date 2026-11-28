@@ -12,7 +12,8 @@
     "test": "node tests/test.js",
     "test:specs": "node tests/test_drive_specs.js",
     "test:ui": "node tests/test_ui.js",
-    "test:all": "node tests/test.js && node tests/test_drive_specs.js && node tests/test_ui.js"
+    "test:all": "node tests/test.js && node tests/test_drive_specs.js && node tests/test_fixes.js && node tests/test_ui.js",
+    "test:fixes": "node tests/test_fixes.js"
   },
   "keywords": [
     "ticket-checkin",

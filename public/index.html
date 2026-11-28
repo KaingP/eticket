@@ -343,6 +343,13 @@
       font-weight: 600;
       color: #3A1418;
     }
+    .stat-sub {
+      font-size: 11px;
+      font-weight: 500;
+      color: #8A5A60;
+      margin-top: 2px;
+      line-height: 1.2;
+    }
 
     /* Thanh Tìm kiếm (Diagram 0) */
     .search-toolbar {
@@ -1218,6 +1225,7 @@
         <div class="stat-card active" id="card-all" onclick="setFilter('all')">
           <div class="stat-val" id="stat-all">--</div>
           <div class="stat-label">Tất cả</div>
+          <div class="stat-sub" id="stat-cancelled" style="display:none"></div>
         </div>
         <div class="stat-card checked" id="card-checked" onclick="setFilter('checked')">
           <div class="stat-val" id="stat-checked">--</div>
@@ -1548,6 +1556,9 @@
         document.getElementById('stat-all').innerText = String(data.all || 0).padStart(2, '0');
         document.getElementById('stat-checked').innerText = String(data.checked || 0).padStart(2, '0');
         document.getElementById('stat-unchecked').innerText = String(data.unchecked || 0).padStart(2, '0');
+        const cancelledEl = document.getElementById('stat-cancelled');
+        cancelledEl.innerText = data.cancelled > 0 ? `gồm ${data.cancelled} vé đã hủy` : '';
+        cancelledEl.style.display = data.cancelled > 0 ? 'block' : 'none';
         document.getElementById('offline-alert').style.display = 'none';
         return true;
       } catch (err) {
