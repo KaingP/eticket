@@ -19,10 +19,11 @@ if [ ! -d "node_modules" ]; then
     npm install --omit=dev
 fi
 
-# 3. Khoi tao CSDL neu chua co
-if [ ! -f "data/tickets.db" ] && [ -f "tickets_sample.json" ]; then
-    echo "[*] Dang khoi tao CSDL tu tickets_sample.json..."
-    node import.js tickets_sample.json
+# 3. Nhac nhap danh sach ve neu CSDL chua co
+if [ ! -f "data/tickets.db" ]; then
+    echo "[!] Chua co du lieu ve. Sau khi Server chay, bam nut \"Nhap danh sach\" tren"
+    echo "    trang chinh de nhap file ve that (.json / .csv), hoac chay: node import.js <file>"
+    echo ""
 fi
 
 # 4. Khoi chay Server

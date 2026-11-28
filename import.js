@@ -5,61 +5,91 @@
 
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
+const { getDb } = require('./db');
 
-const DATA_DIR = path.join(__dirname, 'data');
-const DB_PATH = path.join(DATA_DIR, 'tickets.db');
+const db = getDb();
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+// ------------------------------------------------------------------
+// Chuẩn hóa dữ liệu đầu vào (file PayOS / Excel có thể chứa số, null,
+// boolean dạng chuỗi...) để import không bị crash và không hiểu sai.
+// ------------------------------------------------------------------
+
+// Chuyển mọi kiểu giá trị về chuỗi đã trim ('' nếu null/undefined/object)
+function toStr(val) {
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'string') return val.trim();
+  if (typeof val === 'number' || typeof val === 'bigint' || typeof val === 'boolean') return String(val);
+  return '';
 }
 
-// Khởi tạo Database SQLite (WAL Mode)
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
-db.pragma('synchronous = NORMAL');
+// Lấy giá trị đầu tiên không rỗng trong danh sách
+function firstStr(...vals) {
+  for (const v of vals) {
+    const s = toStr(v);
+    if (s) return s;
+  }
+  return '';
+}
 
-// Đảm bảo bảng tickets và scan_log đầy đủ các cột
-db.exec(`
-  CREATE TABLE IF NOT EXISTS tickets (
-    code TEXT PRIMARY KEY,
-    name TEXT,
-    phone TEXT,
-    email TEXT,
-    order_id TEXT,
-    label TEXT,
-    type TEXT,
-    status TEXT,
-    checked_in INTEGER DEFAULT 0,
-    checked_at TEXT,
-    gate TEXT,
-    issued_at TEXT,
-    note TEXT,
-    raw_json TEXT
-  );
+// Hiểu đúng trạng thái đã check-in: true, 1, "true", "1", "yes", "x", "đã soát"...
+// Lưu ý: chuỗi "false" / "0" / "chưa soát" phải là CHƯA check-in.
+function toBool(val) {
+  if (typeof val === 'boolean') return val;
+  if (typeof val === 'number') return val === 1;
+  const s = toStr(val).toLowerCase();
+  if (!s) return false;
+  if (['1', 'true', 'yes', 'y', 'x', 'có', 'co'].includes(s)) return true;
+  if (s.startsWith('chưa') || s.startsWith('chua') || s.startsWith('không') || s.startsWith('khong')) return false;
+  return s.startsWith('đã') || s.startsWith('da ');
+}
 
-  CREATE TABLE IF NOT EXISTS scan_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    code TEXT,
-    result TEXT,
-    gate TEXT,
-    at TEXT
-  );
+// Chuẩn hóa trạng thái vé về VALID / CANCELLED / giá trị gốc (viết hoa)
+const VALID_ALIASES = ['VALID', 'HỢP LỆ', 'HOP LE', 'ACTIVE'];
+const CANCELLED_ALIASES = ['CANCELLED', 'CANCELED', 'ĐÃ HỦY', 'DA HUY', 'HỦY', 'HUY', 'ĐÃ HUỶ', 'HUỶ', 'REFUNDED', 'HOÀN TIỀN', 'ĐÃ HOÀN TIỀN'];
+function normalizeStatus(val) {
+  const s = toStr(val).toUpperCase().replace(/\s+/g, ' ');
+  if (!s || VALID_ALIASES.includes(s)) return 'VALID';
+  if (CANCELLED_ALIASES.includes(s)) return 'CANCELLED';
+  return s;
+}
 
-  CREATE INDEX IF NOT EXISTS idx_tickets_order ON tickets(order_id);
-  CREATE INDEX IF NOT EXISTS idx_tickets_search ON tickets(name, phone);
-  CREATE INDEX IF NOT EXISTS idx_scan_log_code ON scan_log(code);
-  CREATE INDEX IF NOT EXISTS idx_scan_log_at ON scan_log(at);
-`);
+// Số điện thoại bị Excel/JSON lưu dạng số sẽ mất số 0 đầu (912345678 -> 0912345678)
+function normalizePhone(val) {
+  const s = toStr(val);
+  if (/^[1-9]\d{8}$/.test(s)) return '0' + s;
+  return s;
+}
 
-// Tự động thêm cột nếu database cũ chưa có
-try { db.exec(`ALTER TABLE tickets ADD COLUMN issued_at TEXT`); } catch (e) {}
-try { db.exec(`ALTER TABLE tickets ADD COLUMN note TEXT`); } catch (e) {}
+// Lấy danh sách vé từ các cấu trúc JSON hay gặp:
+//  { tickets: { CODE: {...} } }, { tickets: [...] }, { data: [...] }, [...], { CODE: {...} }
+function extractJsonTickets(data) {
+  const fromMap = (obj) => Object.entries(obj)
+    .filter(([, item]) => item && typeof item === 'object' && !Array.isArray(item))
+    .map(([code, item]) => ({ ...item, ticketCode: firstStr(item.ticketCode, item.code, code) }));
+
+  if (Array.isArray(data)) return data;
+  if (!data || typeof data !== 'object') return [];
+  for (const key of ['tickets', 'data', 'items']) {
+    const v = data[key];
+    if (Array.isArray(v)) return v;
+    if (v && typeof v === 'object') return fromMap(v);
+  }
+  return fromMap(data);
+}
+
+// Phát hiện dấu phân cách CSV: Excel tiếng Việt thường lưu bằng dấu chấm phẩy ';'
+function detectDelimiter(text) {
+  const firstLine = (text.replace(/^\uFEFF/, '').split(/\r?\n/)[0]) || '';
+  const count = (ch) => firstLine.split(ch).length - 1;
+  const candidates = [[',', count(',')], [';', count(';')], ['\t', count('\t')]];
+  candidates.sort((a, b) => b[1] - a[1]);
+  return candidates[0][1] > 0 ? candidates[0][0] : ',';
+}
 
 /**
  * Hàm phân tích file CSV thuần (RFC 4180) không phụ thuộc thư viện ngoài
  */
-function parseCSV(text) {
+function parseCSV(text, delimiter = detectDelimiter(text)) {
   // Loại bỏ BOM nếu có
   const cleanText = text.replace(/^\uFEFF/, '');
   const lines = [];
@@ -85,7 +115,7 @@ function parseCSV(text) {
     } else {
       if (c === '"') {
         inQuotes = true;
-      } else if (c === ',') {
+      } else if (c === delimiter) {
         row.push(field.trim());
         field = '';
       } else if (c === '\r' || c === '\n') {
@@ -111,9 +141,10 @@ function parseCSV(text) {
  * Trả về { success, countTotal, countCheckedIn, countNotValid, message }
  */
 function importTicketsData(rawContent, filename = '') {
-  if (!rawContent || !rawContent.trim()) {
+  if (typeof rawContent !== 'string' || !rawContent.trim()) {
     throw new Error('Dữ liệu rỗng');
   }
+  filename = toStr(filename);
 
   const trimmed = rawContent.replace(/^\uFEFF/, '').trim();
   const isCsv = filename.toLowerCase().endsWith('.csv') ||
@@ -161,11 +192,10 @@ function importTicketsData(rawContent, filename = '') {
 
     for (let r = 1; r < csvRows.length; r++) {
       const row = csvRows[r];
-      const code = (row[codeIdx] || '').trim().toUpperCase();
+      const code = toStr(row[codeIdx]).toUpperCase();
       if (!code) continue;
 
-      const checkedInVal = checkedInIdx !== -1 ? (row[checkedInIdx] || '').trim().toLowerCase() : '';
-      const isChecked = checkedInVal === '1' || checkedInVal === 'true' || checkedInVal.includes('đã');
+      const isChecked = checkedInIdx !== -1 ? toBool(row[checkedInIdx]) : false;
 
       ticketsList.push({
         ticketCode: code,
@@ -175,7 +205,7 @@ function importTicketsData(rawContent, filename = '') {
         orderId: orderIdIdx !== -1 ? row[orderIdIdx] : '',
         ticketLabel: labelIdx !== -1 ? row[labelIdx] : 'Vé 1/1',
         ticketTypeName: typeIdx !== -1 ? row[typeIdx] : 'Vé Sự Kiện',
-        status: statusIdx !== -1 ? (row[statusIdx] || 'VALID').trim().toUpperCase() : 'VALID',
+        status: statusIdx !== -1 ? row[statusIdx] : 'VALID',
         checkedIn: isChecked,
         checkedInAt: checkedAtIdx !== -1 && isChecked ? row[checkedAtIdx] : null,
         gate: gateIdx !== -1 && isChecked ? (row[gateIdx] || null) : null,
@@ -192,20 +222,11 @@ function importTicketsData(rawContent, filename = '') {
       throw new Error('Định dạng JSON không hợp lệ: ' + err.message);
     }
 
-    if (data.tickets && typeof data.tickets === 'object' && !Array.isArray(data.tickets)) {
-      ticketsList = Object.entries(data.tickets).map(([code, item]) => ({
-        ...item,
-        ticketCode: item.ticketCode || code
-      }));
-    } else if (Array.isArray(data)) {
-      ticketsList = data;
-    } else if (typeof data === 'object') {
-      ticketsList = Object.entries(data).map(([code, item]) => ({
-        ...item,
-        ticketCode: item.ticketCode || code
-      }));
-    }
+    ticketsList = extractJsonTickets(data);
   }
+
+  // Bỏ các phần tử không phải object (null, số, chuỗi...) trong mảng JSON
+  ticketsList = ticketsList.filter(item => item && typeof item === 'object' && !Array.isArray(item));
 
   if (ticketsList.length === 0) {
     throw new Error('Không tìm thấy vé nào hợp lệ trong dữ liệu');
@@ -239,27 +260,27 @@ function importTicketsData(rawContent, filename = '') {
 
   const importTx = db.transaction((items) => {
     for (const item of items) {
-      const code = (item.ticketCode || item.code || '').trim().toUpperCase();
+      const code = firstStr(item.ticketCode, item.code).toUpperCase();
       if (!code) continue;
 
-      const rawStatus = (item.status || 'VALID').trim().toUpperCase();
-      const checkedIn = item.checkedIn ? 1 : 0;
-      const checkedAt = item.checkedInAt || null;
-      const gate = item.gate || (checkedIn ? 'PRE_CHECKIN' : null);
-      const issuedAt = item.issuedAt || item.issued_at || null;
-      const note = item.note || item.notes || item.ghiChu || '';
+      const rawStatus = normalizeStatus(item.status);
+      const checkedIn = toBool(item.checkedIn !== undefined ? item.checkedIn : item.checked_in) ? 1 : 0;
+      const checkedAt = checkedIn ? (firstStr(item.checkedInAt, item.checked_at) || null) : null;
+      const gate = checkedIn ? (firstStr(item.gate) || 'PRE_CHECKIN') : null;
+      const issuedAt = firstStr(item.issuedAt, item.issued_at) || null;
+      const note = firstStr(item.note, item.notes, item.ghiChu);
 
       if (checkedIn === 1) countCheckedIn++;
       if (rawStatus !== 'VALID') countNotValid++;
 
       upsertStmt.run({
         code,
-        name: item.customerName || item.name || '',
-        phone: item.phone || '',
-        email: item.email || '',
-        order_id: item.orderId || item.order_id || '',
-        label: item.ticketLabel || item.label || 'Vé 1/1',
-        type: item.ticketTypeName || item.type || 'Vé Sự Kiện',
+        name: firstStr(item.customerName, item.name),
+        phone: normalizePhone(item.phone),
+        email: firstStr(item.email),
+        order_id: firstStr(item.orderId, item.order_id),
+        label: firstStr(item.ticketLabel, item.label) || 'Vé 1/1',
+        type: firstStr(item.ticketTypeName, item.type) || 'Vé Sự Kiện',
         status: rawStatus,
         checked_in: checkedIn,
         checked_at: checkedAt,
@@ -278,7 +299,8 @@ function importTicketsData(rawContent, filename = '') {
     SELECT
       COUNT(*) AS total,
       SUM(CASE WHEN checked_in = 1 THEN 1 ELSE 0 END) AS checked,
-      SUM(CASE WHEN status != 'VALID' THEN 1 ELSE 0 END) AS not_valid
+      SUM(CASE WHEN status != 'VALID' THEN 1 ELSE 0 END) AS not_valid,
+      SUM(CASE WHEN status = 'VALID' AND checked_in = 0 THEN 1 ELSE 0 END) AS remaining
     FROM tickets
   `).get();
 
@@ -293,15 +315,10 @@ function importTicketsData(rawContent, filename = '') {
 }
 
 function runImport(filePath) {
-  let targetFile = filePath;
+  const targetFile = filePath;
   if (!targetFile) {
-    const rootSample = path.join(__dirname, 'tickets_sample.json');
-    const dataSample = path.join(DATA_DIR, 'tickets.json');
-    if (fs.existsSync(rootSample)) {
-      targetFile = rootSample;
-    } else {
-      targetFile = dataSample;
-    }
+    console.error('[!] Cách dùng: node import.js <đường dẫn file vé .json hoặc .csv>');
+    process.exit(1);
   }
 
   console.log(`\n========================================`);
@@ -331,7 +348,7 @@ function runImport(filePath) {
     console.log(`[*] Hiện có trong Database:`);
     console.log(`  + Tổng số vé trong DB:     ${result.dbStats.total} vé`);
     console.log(`  + Đã check-in:             ${result.dbStats.checked} vé`);
-    console.log(`  + Còn lại (chưa check-in): ${result.dbStats.total - result.dbStats.checked} vé`);
+    console.log(`  + Còn lại (VALID, chưa vào): ${result.dbStats.remaining} vé`);
     console.log(`  + Vé không hợp lệ (hủy):   ${result.dbStats.not_valid} vé`);
     console.log(`========================================\n`);
     return result;
@@ -347,4 +364,4 @@ if (require.main === module) {
   runImport(filePath);
 }
 
-module.exports = { runImport, importTicketsData, parseCSV, db };
+module.exports = { runImport, importTicketsData, parseCSV, db, toStr, toBool, normalizeStatus };

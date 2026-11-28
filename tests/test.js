@@ -3,17 +3,16 @@
  * Chạy 6 kịch bản kiểm thử bắt buộc theo đặc tả kỹ thuật
  */
 
+const { TEST_TMP_DIR } = require('./setup-test-db'); // PHẢI đứng đầu: dùng DB tạm, không đụng DB thật
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
 const ROOT_DIR = fs.existsSync(path.join(__dirname, 'server.js')) ? __dirname : path.resolve(__dirname, '..');
 const { runImport, importTicketsData } = require(path.join(ROOT_DIR, 'import'));
 const { handleCheckin } = require(path.join(ROOT_DIR, 'server'));
 const { exportData } = require(path.join(ROOT_DIR, 'export'));
 
-const DATA_DIR = path.join(ROOT_DIR, 'data');
-const DB_PATH = path.join(DATA_DIR, 'tickets.db');
-const TICKETS_SAMPLE = path.join(DATA_DIR, 'tickets.json');
+const { getDb } = require(path.join(ROOT_DIR, 'db'));
+const TICKETS_SAMPLE = path.join(__dirname, 'fixtures', 'tickets.json');
 
 let passedTests = 0;
 let totalTests = 6;
@@ -38,7 +37,7 @@ async function runTestSuite() {
   // -------------------------------------------------------------
   console.log(`[TEST 1] Kiểm tra Import file tickets.json mẫu...`);
   // Đảm bảo DB được làm mới
-  const db = new Database(DB_PATH);
+  const db = getDb();
   db.exec(`DELETE FROM scan_log; DELETE FROM tickets;`);
 
   const importResult = runImport(TICKETS_SAMPLE);
@@ -154,7 +153,7 @@ async function runTestSuite() {
 
   // Export JSON & CSV
   const { jsonString, csvString } = exportData(db);
-  const tempExportFile = path.join(DATA_DIR, 'temp_test_export.json');
+  const tempExportFile = path.join(TEST_TMP_DIR, 'temp_test_export.json');
   fs.writeFileSync(tempExportFile, jsonString, 'utf8');
 
   // Import lại từ file JSON vừa export

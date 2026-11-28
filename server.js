@@ -12,7 +12,7 @@ const https = require('https');
 const http = require('http');
 const express = require('express');
 const QRCode = require('qrcode');
-const Database = require('better-sqlite3');
+const { getDb, closeDb, DATA_DIR } = require('./db');
 const { exportData } = require('./export');
 const { importTicketsData } = require('./import');
 
@@ -21,9 +21,7 @@ const PORT = parseInt(process.env.PORT || '443', 10);
 const HTTP_PORT = parseInt(process.env.HTTP_PORT || '80', 10);
 const ADMIN_PIN = process.env.ADMIN_PIN || '123456';
 
-const DATA_DIR = path.join(__dirname, 'data');
 const BACKUP_DIR = path.join(DATA_DIR, 'backup');
-const DB_PATH = path.join(DATA_DIR, 'tickets.db');
 const CERTS_DIR = path.join(__dirname, 'certs');
 const CERT_PATH = path.join(CERTS_DIR, 'cert.pem');
 const KEY_PATH = path.join(CERTS_DIR, 'key.pem');
@@ -32,59 +30,22 @@ const KEY_PATH = path.join(CERTS_DIR, 'key.pem');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
-// Kết nối SQLite (WAL mode)
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
-db.pragma('synchronous = NORMAL');
+// Kết nối SQLite (WAL mode) - schema khởi tạo trong db.js
+const db = getDb();
 
-// Khởi tạo bảng nếu chưa có
-db.exec(`
-  CREATE TABLE IF NOT EXISTS tickets (
-    code TEXT PRIMARY KEY,
-    name TEXT,
-    phone TEXT,
-    email TEXT,
-    order_id TEXT,
-    label TEXT,
-    type TEXT,
-    status TEXT,
-    checked_in INTEGER DEFAULT 0,
-    checked_at TEXT,
-    gate TEXT,
-    issued_at TEXT,
-    note TEXT,
-    raw_json TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS scan_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    code TEXT,
-    result TEXT,
-    gate TEXT,
-    at TEXT
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_tickets_order ON tickets(order_id);
-  CREATE INDEX IF NOT EXISTS idx_tickets_search ON tickets(name, phone);
-  CREATE INDEX IF NOT EXISTS idx_scan_log_code ON scan_log(code);
-  CREATE INDEX IF NOT EXISTS idx_scan_log_at ON scan_log(at);
-`);
-
-// Thêm cột nếu DB cũ chưa có
-try { db.exec(`ALTER TABLE tickets ADD COLUMN issued_at TEXT`); } catch (e) {}
-try { db.exec(`ALTER TABLE tickets ADD COLUMN note TEXT`); } catch (e) {}
+// Chuẩn hóa giá trị từ request về chuỗi (tránh crash khi client gửi số/mảng/object)
+function toStr(val) {
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'string') return val.trim();
+  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+  return '';
+}
 
 // Prepared Statements tối ưu tốc độ
 const stmtUpdateCheckin = db.prepare(`
   UPDATE tickets
   SET checked_in = 1, checked_at = ?, gate = ?
   WHERE code = ? AND checked_in = 0 AND status = 'VALID'
-`);
-
-const stmtUpdateCheckinAny = db.prepare(`
-  UPDATE tickets
-  SET checked_in = 1, checked_at = ?, gate = ?
-  WHERE code = ?
 `);
 
 const stmtGetTicket = db.prepare(`SELECT * FROM tickets WHERE code = ?`);
@@ -145,6 +106,7 @@ function getPrimaryIp() {
 // Tự động kiểm tra và sinh chứng chỉ SSL phù hợp với IP hiện tại
 function ensureSslCert(primaryIp, allIps) {
   let needsGen = false;
+  let reason = 'chưa có chứng chỉ';
 
   if (!fs.existsSync(CERT_PATH) || !fs.existsSync(KEY_PATH)) {
     needsGen = true;
@@ -158,12 +120,15 @@ function ensureSslCert(primaryIp, allIps) {
         const hasIp = primaryIp === '127.0.0.1' || sanList.includes(`IP Address:${primaryIp}`);
         if (isExpired || !hasIp) {
           needsGen = true;
+          reason = isExpired ? 'chứng chỉ cũ đã hết hạn' : `IP máy chủ đã đổi (chứng chỉ cũ cấp cho: ${certObj.subjectAltName || 'không rõ'})`;
         }
       } else if (!certContent.includes(primaryIp) && primaryIp !== '127.0.0.1') {
         needsGen = true;
+        reason = 'IP máy chủ đã đổi';
       }
     } catch (e) {
       needsGen = true;
+      reason = `không đọc được chứng chỉ cũ (${e.message})`;
     }
   }
 
@@ -229,10 +194,14 @@ ${altNames.join('\n')}
       const tempCnf = path.join(CERTS_DIR, 'temp_openssl.cnf');
       fs.writeFileSync(tempCnf, cnfContent, 'utf8');
       execSync(`${opensslCmd} req -x509 -nodes -days 365 -newkey rsa:2048 -keyout "${KEY_PATH}" -out "${CERT_PATH}" -config "${tempCnf}"`, { stdio: 'pipe' });
-      try { fs.unlinkSync(tempCnf); } catch(e) {}
-      console.log(`[+] Đã tự động cập nhật chứng chỉ SSL cho IP: ${primaryIp}`);
+      try { fs.unlinkSync(tempCnf); } catch (e) { /* file tạm, không quan trọng */ }
+      console.log(`\n[!] ĐÃ TẠO CHỨNG CHỈ SSL MỚI cho IP ${primaryIp} - Lý do: ${reason}`);
+      console.log(`[!] Điện thoại nhân viên đã kết nối trước đó cần QUÉT LẠI mã QR bên dưới`);
+      console.log(`    và chấp nhận cảnh báo chứng chỉ một lần nữa.\n`);
     } catch (err) {
-      // Bỏ qua nếu môi trường không có openssl
+      const detail = (err.stderr && err.stderr.toString().trim()) || err.message;
+      console.error(`[!] KHÔNG TẠO ĐƯỢC CHỨNG CHỈ SSL (${reason}): ${detail}`);
+      console.error(`[!] Kiểm tra OpenSSL đã được cài đặt (Git for Windows có sẵn OpenSSL).`);
     }
   }
 }
@@ -250,10 +219,22 @@ app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: 0 // Đảm bảo client luôn nhận code mới nhất khi tải trang
 }));
 
+const checkinTx = db.transaction((now, gate, code) => {
+  const result = stmtUpdateCheckin.run(now, gate, code);
+  if (result.changes === 1) stmtInsertLog.run(code, 'OK', gate, now);
+  return result;
+});
+
+const undoTx = db.transaction((code, gate, now) => {
+  const result = stmtUndoCheckin.run(code);
+  if (result.changes === 1) stmtInsertLog.run(code, 'UNDO', gate, now);
+  return result;
+});
+
 // Logic xử lý check-in chung cho quét QR và nhập tay
 function handleCheckin(rawCode, rawGate) {
-  const code = (rawCode || '').trim().toUpperCase();
-  const gate = (rawGate || 'Cổng chính').trim();
+  const code = toStr(rawCode).toUpperCase();
+  const gate = toStr(rawGate) || 'Cổng chính';
   const now = getVietnamISOString();
 
   if (!code) {
@@ -263,13 +244,13 @@ function handleCheckin(rawCode, rawGate) {
     };
   }
 
-  // ATOMIC UPDATE: Chỉ 1 request duy nhất thắng nếu gửi đồng thời
-  const updateResult = stmtUpdateCheckin.run(now, gate, code);
+  // ATOMIC UPDATE: Chỉ 1 request duy nhất thắng nếu gửi đồng thời.
+  // Cập nhật vé + ghi log trong cùng 1 transaction để không lệch nhau khi mất điện.
+  const updateResult = checkinTx(now, gate, code);
 
   if (updateResult.changes === 1) {
     // Check-in thành công
     const ticket = stmtGetTicket.get(code);
-    stmtInsertLog.run(code, 'OK', gate, now);
     console.log(`[SCAN OK] Cổng: ${gate} | Mã: ${code} | Vé: ${ticket.label} | Tên: ${ticket.name}`);
     return {
       httpStatus: 200,
@@ -361,7 +342,7 @@ app.post('/api/scan', (req, res) => {
 // 2. API Check-in thủ công (Diagram 0: Thay đổi trạng thái thủ công từ "Chưa soát" -> "Đã soát")
 app.post('/api/manual-checkin', (req, res) => {
   const { code, gate, toggle } = req.body || {};
-  const cleanCode = (code || '').trim().toUpperCase();
+  const cleanCode = toStr(code).toUpperCase();
   if (!cleanCode) {
     return res.status(400).json({ status: 'INVALID', message: 'Mã vé không được để trống' });
   }
@@ -372,21 +353,26 @@ app.post('/api/manual-checkin', (req, res) => {
   }
 
   const now = getVietnamISOString();
-  const gateName = (gate || 'Thủ công').trim();
+  const gateName = toStr(gate) || 'Thủ công';
 
   if (ticket.checked_in === 1 && toggle) {
     // Hoàn tác về Chưa soát
-    stmtUndoCheckin.run(cleanCode);
-    stmtInsertLog.run(cleanCode, 'UNDO', gateName, now);
+    const undoResult = undoTx(cleanCode, gateName, now);
+    if (undoResult.changes !== 1) {
+      return res.status(409).json({ status: 'ERROR', message: 'Vé đã được hoàn tác ở thiết bị khác' });
+    }
     console.log(`[MANUAL UNDO] Mã: ${cleanCode} -> Chưa soát`);
     return res.json({ status: 'OK', checked_in: 0, checked_at: null, message: 'Đã hoàn tác trạng thái Chưa soát' });
-  } else {
-    // Đánh dấu Đã soát
-    stmtUpdateCheckinAny.run(now, gateName, cleanCode);
-    stmtInsertLog.run(cleanCode, 'OK', gateName, now);
-    console.log(`[MANUAL CHECKIN] Mã: ${cleanCode} -> Đã soát`);
-    return res.json({ status: 'OK', checked_in: 1, checked_at: now, message: 'Đã chuyển sang Đã soát' });
   }
+
+  // Đánh dấu Đã soát: dùng CHUNG quy tắc với quét QR
+  // (chặn vé CANCELLED, báo DUPLICATE kèm giờ/cổng đã soát, không ghi đè lượt soát cũ)
+  const result = handleCheckin(cleanCode, gateName);
+  if (result.body.status === 'OK') {
+    console.log(`[MANUAL CHECKIN] Mã: ${cleanCode} -> Đã soát`);
+    return res.json({ ...result.body, checked_in: 1, checked_at: result.body.at, message: 'Đã chuyển sang Đã soát' });
+  }
+  return res.status(409).json(result.body);
 });
 
 // 3. API Thống kê Dashboard (Diagram 2 & 3: Tất cả, Đã soát, Chưa soát + Refresh)
@@ -396,7 +382,7 @@ app.get('/api/stats', (req, res) => {
       SELECT
         COUNT(*) AS total_all,
         SUM(CASE WHEN checked_in = 1 THEN 1 ELSE 0 END) AS checked,
-        SUM(CASE WHEN checked_in = 0 THEN 1 ELSE 0 END) AS unchecked,
+        SUM(CASE WHEN status != 'VALID' AND checked_in = 0 THEN 1 ELSE 0 END) AS cancelled,
         SUM(CASE WHEN status = 'VALID' THEN 1 ELSE 0 END) AS total_valid,
         SUM(CASE WHEN status = 'VALID' AND checked_in = 0 THEN 1 ELSE 0 END) AS remaining
       FROM tickets
@@ -436,7 +422,9 @@ app.get('/api/stats', (req, res) => {
     res.json({
       all: stats.total_all || 0,
       checked: stats.checked || 0,
-      unchecked: stats.unchecked || 0,
+      // "Chưa soát" = vé VALID chưa vào (không tính vé đã hủy/hoàn tiền)
+      unchecked: stats.remaining || 0,
+      cancelled: stats.cancelled || 0,
       total: stats.total_valid || 0,
       totalAll: stats.total_all || 0,
       remaining: stats.remaining || 0,
@@ -451,10 +439,10 @@ app.get('/api/stats', (req, res) => {
 // 4. API Lấy danh sách vé có lọc theo Dashboard, tìm kiếm mã vé, phân trang (Diagram 0, 2, 3)
 app.get('/api/tickets', (req, res) => {
   try {
-    const status = req.query.status || 'all'; // 'all', 'checked', 'unchecked'
-    const search = (req.query.search || '').trim();
-    const page = Math.max(1, parseInt(req.query.page || '1', 10));
-    const limit = Math.min(Math.max(1, parseInt(req.query.limit || '20', 10)), 100);
+    const status = toStr(req.query.status) || 'all'; // 'all', 'checked', 'unchecked'
+    const search = toStr(req.query.search);
+    const page = Math.max(1, parseInt(toStr(req.query.page), 10) || 1);
+    const limit = Math.min(Math.max(1, parseInt(toStr(req.query.limit), 10) || 20), 100);
     const offset = (page - 1) * limit;
 
     let whereClauses = [];
@@ -463,7 +451,7 @@ app.get('/api/tickets', (req, res) => {
     if (status === 'checked') {
       whereClauses.push('checked_in = 1');
     } else if (status === 'unchecked') {
-      whereClauses.push('checked_in = 0');
+      whereClauses.push("checked_in = 0 AND status = 'VALID'");
     }
 
     if (search) {
@@ -480,14 +468,10 @@ app.get('/api/tickets', (req, res) => {
       SELECT code, name, phone, email, order_id, label, type, status, checked_in, checked_at, gate, issued_at, note, raw_json
       FROM tickets
       ${whereSql}
-      ORDER BY 
-        CASE WHEN ? = '' THEN 1 ELSE 0 END,
-        checked_at DESC, 
-        order_id ASC, 
-        code ASC
+      ORDER BY checked_at DESC, order_id ASC, code ASC
       LIMIT ? OFFSET ?
     `;
-    const rows = db.prepare(dataSql).all(search, ...params, limit, offset);
+    const rows = db.prepare(dataSql).all(...params, limit, offset);
 
     const tickets = rows.map((r, idx) => ({
       stt: offset + idx + 1,
@@ -522,7 +506,7 @@ app.get('/api/tickets', (req, res) => {
 
 // 5. API Chi tiết mã vé (Diagram 0: Xem chi tiết thông tin vé)
 app.get('/api/tickets/:code', (req, res) => {
-  const code = (req.params.code || '').trim().toUpperCase();
+  const code = toStr(req.params.code).toUpperCase();
   const ticket = stmtGetTicket.get(code);
   if (!ticket) {
     return res.status(404).json({ error: 'Không tìm thấy vé' });
@@ -540,7 +524,9 @@ app.get('/api/tickets/:code', (req, res) => {
       if (parsed.unitPrice) parts.push(`Giá: ${Number(parsed.unitPrice).toLocaleString('vi-VN')} đ`);
       paymentInfo = parts.join(' | ');
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn(`[TICKET DETAIL] raw_json của vé ${code} bị lỗi: ${e.message}`);
+  }
 
   res.json({
     code: ticket.code,
@@ -564,9 +550,9 @@ app.get('/api/tickets/:code', (req, res) => {
 
 // 5.1 API Cập nhật ghi chú (Note) cho vé
 app.post('/api/tickets/:code/note', (req, res) => {
-  const code = (req.params.code || '').trim().toUpperCase();
+  const code = toStr(req.params.code).toUpperCase();
   const body = req.body || {};
-  const note = (body.note || '').trim();
+  const note = toStr(body.note);
   const result = db.prepare('UPDATE tickets SET note = ? WHERE code = ?').run(note, code);
   if (result.changes === 1) {
     res.json({ success: true, status: 'OK', code, note });
@@ -579,10 +565,10 @@ app.post('/api/tickets/:code/note', (req, res) => {
 app.post('/api/import', (req, res) => {
   try {
     const { filename, content } = req.body || {};
-    if (!content || !content.trim()) {
+    if (typeof content !== 'string' || !content.trim()) {
       return res.status(400).json({ success: false, message: 'File lỗi: Dữ liệu rỗng' });
     }
-    const result = importTicketsData(content, filename || '');
+    const result = importTicketsData(content, toStr(filename));
     res.json(result);
   } catch (err) {
     console.error('[IMPORT ERROR]', err.message);
@@ -592,7 +578,7 @@ app.post('/api/import', (req, res) => {
 
 // 7. API Tìm kiếm tra tay
 app.get('/api/search', (req, res) => {
-  const q = (req.query.q || '').trim();
+  const q = toStr(req.query.q);
   if (!q) {
     return res.json([]);
   }
@@ -633,16 +619,15 @@ app.post('/api/undo', (req, res) => {
     return res.status(403).json({ status: 'FORBIDDEN', message: 'Mã PIN quản trị không chính xác' });
   }
 
-  const cleanCode = (code || '').trim().toUpperCase();
+  const cleanCode = toStr(code).toUpperCase();
   if (!cleanCode) {
     return res.status(400).json({ status: 'ERROR', message: 'Mã vé không hợp lệ' });
   }
 
   const now = getVietnamISOString();
-  const undoResult = stmtUndoCheckin.run(cleanCode);
+  const undoResult = undoTx(cleanCode, 'ADMIN', now);
 
   if (undoResult.changes === 1) {
-    stmtInsertLog.run(cleanCode, 'UNDO', 'ADMIN', now);
     console.log(`[UNDO] Quản trị viên đã hoàn tác check-in vé: ${cleanCode}`);
     return res.json({ status: 'OK', message: `Đã hoàn tác vé ${cleanCode} thành công` });
   } else {
@@ -657,7 +642,7 @@ app.get('/api/export', (req, res) => {
     return res.status(403).json({ error: 'Mã PIN quản trị không chính xác' });
   }
 
-  const format = (req.query.format || 'json').toLowerCase();
+  const format = (toStr(req.query.format) || 'json').toLowerCase();
   try {
     const { jsonString, csvString } = exportData(db);
 
@@ -686,7 +671,10 @@ app.get('/api/backup/download', (req, res) => {
   db.backup(tempBackupFile)
     .then(() => {
       res.download(tempBackupFile, 'tickets.db', (err) => {
-        try { fs.unlinkSync(tempBackupFile); } catch (e) {}
+        if (err) console.error('[BACKUP DOWNLOAD] Lỗi gửi file:', err.message);
+        try { fs.unlinkSync(tempBackupFile); } catch (e) {
+          console.warn('[BACKUP DOWNLOAD] Không xóa được file tạm:', e.message);
+        }
       });
     })
     .catch((err) => {
@@ -701,10 +689,10 @@ app.get('/api/admin/tickets', (req, res) => {
     return res.status(403).json({ error: 'Mã PIN quản trị không chính xác' });
   }
 
-  const filter = req.query.filter || 'all'; // all, checked, unchecked, invalid
-  const search = (req.query.search || '').trim();
-  const parsedLimit = parseInt(req.query.limit || '100', 10);
-  const parsedOffset = parseInt(req.query.offset || '0', 10);
+  const filter = toStr(req.query.filter) || 'all'; // all, checked, unchecked, invalid
+  const search = toStr(req.query.search);
+  const parsedLimit = parseInt(toStr(req.query.limit) || '100', 10);
+  const parsedOffset = parseInt(toStr(req.query.offset) || '0', 10);
   const limit = Math.min(Math.max(1, Number.isFinite(parsedLimit) ? parsedLimit : 100), 500);
   const offset = Math.max(0, Number.isFinite(parsedOffset) ? parsedOffset : 0);
 
@@ -963,7 +951,9 @@ function performAutoBackup() {
           try {
             fs.unlinkSync(file.path);
             console.log(`[BACKUP CLEAN] Đã xóa bản sao lưu cũ: ${file.name}`);
-          } catch (e) {}
+          } catch (e) {
+            console.warn(`[BACKUP CLEAN] Không xóa được ${file.name}: ${e.message}`);
+          }
         }
       }
     })
@@ -971,6 +961,9 @@ function performAutoBackup() {
       console.error(`[BACKUP ERROR] Lỗi tự động sao lưu:`, err.message);
     });
 }
+
+let backupTimer = null;
+const runningServers = [];
 
 async function startServer() {
   const primaryIp = getPrimaryIp();
@@ -981,7 +974,7 @@ async function startServer() {
 
   // Chạy backup định kỳ mỗi 5 phút
   const BACKUP_INTERVAL_MS = 5 * 60 * 1000;
-  const backupTimer = setInterval(performAutoBackup, BACKUP_INTERVAL_MS);
+  backupTimer = setInterval(performAutoBackup, BACKUP_INTERVAL_MS);
   if (backupTimer.unref) backupTimer.unref();
 
   // Khởi chạy HTTPS Server (bắt buộc cho Camera)
@@ -998,6 +991,13 @@ async function startServer() {
   }
 
   const httpsServer = https.createServer(sslOptions, app);
+  runningServers.push(httpsServer);
+  httpsServer.on('error', (e) => {
+    console.error(`[!] KHÔNG MỞ ĐƯỢC CỔNG HTTPS ${PORT}: ${e.message}`);
+    if (e.code === 'EADDRINUSE') console.error(`[!] Có thể server đang chạy ở cửa sổ khác. Hãy tắt cửa sổ đó rồi chạy lại.`);
+    if (e.code === 'EACCES') console.error(`[!] Cần chạy với quyền Administrator/sudo để dùng cổng ${PORT}, hoặc đặt PORT=8443.`);
+    shutdown(1);
+  });
 
   httpsServer.listen(PORT, '0.0.0.0', async () => {
     const portPart = PORT === 443 ? '' : `:${PORT}`;
@@ -1036,6 +1036,7 @@ async function startServer() {
       res.redirect(301, `https://${host}${req.url}`);
     });
     const httpServer = http.createServer(httpApp);
+    runningServers.push(httpServer);
     httpServer.on('error', (e) => {
       console.log(`[NOTE] Cổng HTTP 80 không khả dụng (${e.message}), truy cập trực tiếp bằng https://`);
     });
@@ -1051,12 +1052,29 @@ if (require.main === module) {
   startServer();
 }
 
-// Xử lý dừng máy chủ an toàn
-process.on('SIGINT', () => {
-  console.log('\n[!] Đang đóng kết nối cơ sở dữ liệu...');
-  db.close();
-  console.log('[+] Đã đóng SQLite an toàn. Tạm biệt!');
-  process.exit(0);
-});
+// Xử lý dừng máy chủ an toàn (Ctrl+C, đóng cửa sổ, kill, tắt dịch vụ)
+let shuttingDown = false;
+function shutdown(exitCode = 0) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log('\n[!] Đang dừng máy chủ và đóng kết nối cơ sở dữ liệu...');
+  if (backupTimer) clearInterval(backupTimer);
+  for (const srv of runningServers) {
+    try { srv.close(); } catch (e) { /* server có thể chưa mở */ }
+  }
+  try {
+    closeDb();
+    console.log('[+] Đã đóng SQLite an toàn. Tạm biệt!');
+  } catch (e) {
+    console.error('[!] Lỗi khi đóng SQLite:', e.message);
+  }
+  process.exit(exitCode);
+}
+
+if (require.main === module) {
+  process.on('SIGINT', () => shutdown(0));
+  process.on('SIGTERM', () => shutdown(0));
+  process.on('SIGHUP', () => shutdown(0)); // Đóng cửa sổ terminal / CMD
+}
 
 module.exports = { app, db, handleCheckin, startServer };

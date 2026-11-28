@@ -6,9 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
-
-const DATA_DIR = path.join(__dirname, 'data');
-const DB_PATH = path.join(DATA_DIR, 'tickets.db');
+const { DB_PATH, DATA_DIR } = require('./db');
 
 function getDb() {
   if (!fs.existsSync(DB_PATH)) {
@@ -64,6 +62,7 @@ function exportData(dbInstance) {
         originalTicket = JSON.parse(row.raw_json);
       }
     } catch (e) {
+      console.warn(`[EXPORT] raw_json của vé ${row.code} bị lỗi, chỉ xuất dữ liệu trong DB: ${e.message}`);
       originalTicket = {};
     }
 
